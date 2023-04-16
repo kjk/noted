@@ -312,9 +312,10 @@
     bottom: 4px;
   }
   /* have to undo some of the taildwindcss reset */
-  :global(.codemirror-wrapper) {
+
+  /* :global(.codemirror-wrapper) {
     height: 100%;
-    /* background-color: transparent; */
+    background-color: transparent;
   }
   :global(.cm-editor) {
     overflow: hidden;
@@ -323,7 +324,7 @@
 
   .codemirror-wrapper :global(.cm-focused) {
     outline: none;
-  }
+  } */
 
   .user-modify-plain {
     -webkit-user-modify: read-write-plaintext-only;
