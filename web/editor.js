@@ -47,8 +47,9 @@ import {
 } from "./deps.js";
 
 import { basicSetup2 } from "./lib/cmexts";
+import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
-import { placeholder as placeholderExt } from "@codemirror/view";
+import { throwIf } from "./lib/util.js";
 
 /** @typedef { import("@codemirror/state").Extension} Extension */
 
@@ -59,33 +60,32 @@ class PageState {
   }
 }
 
-function getBaseExtensions2(
-  basic,
-  useTab,
-  tabSize,
-  lineWrapping,
-  placeholder,
-  editable
-) {
-  /** @type {Extension[]} */
-  const res = [
-    indentUnit.of(" ".repeat(tabSize)),
-    EditorView.editable.of(editable),
-  ];
-
-  if (basic) res.push(basicSetup2);
-  if (useTab) res.push(keymap.of([indentWithTab]));
-  if (placeholder) res.push(placeholderExt(placeholder));
-  if (lineWrapping) res.push(EditorView.lineWrapping);
-
-  return res;
-}
 export class Editor {
-  constructor() {
-    this.viewDispatch = () => {};
+  /** @type {HTMLElement} */
+  editorElement;
+  /** @type {EditorView} */
+  editorView;
+  /** @type {Function} */
+  docChanged;
+
+  dispatchTransaction(tr) {
+    this.editorView.update([tr]);
+
+    if (tr.docChanged && this.docChanged) {
+      this.docChanged(tr);
+    }
+  }
+
+  constructor(editorElement) {
+    throwIf(!editorElement);
+    this.editorElement = editorElement;
+    // this.viewDispatch = () => {};
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
-      parent: document.getElementById("sb-editor"),
+      parent: editorElement,
+      dispatch: (tr) => {
+        this.dispatchTransaction(tr);
+      },
     });
   }
 
@@ -95,23 +95,16 @@ export class Editor {
    * @returns {EditorState}
    */
   createEditorState(text, readOnly) {
-    let basic = true;
-    let useTab = true;
     let tabSize = 4;
-    let lineWrapping = true;
-    let placeholder = "";
-    let editable = true;
 
     /** @type {Extension[]}*/
     const exts = [
-      ...getBaseExtensions2(
-        basic,
-        useTab,
-        tabSize,
-        lineWrapping,
-        placeholder,
-        editable
-      ),
+      indentUnit.of(" ".repeat(tabSize)),
+      // TODO: a different way of doing read-only
+      EditorView.editable.of(!readOnly),
+      ...basicSetup2,
+      keymap.of([indentWithTab]),
+      EditorView.lineWrapping,
     ];
     // const lang = await getCMLangFromFileName(fileName);
     // if (lang) {
@@ -121,5 +114,22 @@ export class Editor {
       doc: text,
       extensions: exts,
     });
+  }
+
+  /**
+   * @returns {string}
+   */
+  getText() {
+    let s = this.editorView.state.sliceDoc();
+    return s;
+  }
+
+  setText(s) {
+    // TODO: better way
+    let state = this.createEditorState(s, false);
+    this.editorView.setState(state);
+  }
+  focus() {
+    focusEditorView(this.editorView);
   }
 }

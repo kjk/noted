@@ -9,7 +9,6 @@
   import { EditorState } from "@codemirror/state";
   import { debounce, len, throwIf } from "./lib/util";
   import { basicSetup2 } from "./lib/cmexts";
-  // import { getCMLangFromFileName } from "../cmlangs";
   import { onMount } from "svelte";
   import { indentUnit } from "@codemirror/language";
   import { indentWithTab } from "@codemirror/commands";
@@ -22,14 +21,15 @@
     setNoteTitle,
     setNotes,
   } from "./noteddb";
+  import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
 
   let notes = [];
 
   /** @type {HTMLElement} */
   let editorElement = null;
-  /** @type {EditorView} */
-  let editorView = null;
+  /** @type {Editor} */
+  let editor;
   let outputMsg = "";
   let statusMsg = "";
   let errorMsg = "";
@@ -71,96 +71,21 @@
     errorMsg = "";
   }
 
-  function createEditorView() {
-    throwIf(!editorElement);
-
-    async function handleEditorChange(tr) {
-      let s = editorView.state.doc.toString();
-      await addNoteVersion(note, s);
-      await setNotes(notes);
-    }
-
-    /** @type {Function} */
-    const changeFn = debounce(handleEditorChange, 1000);
-
-    function dispatchTransaction(tr) {
-      editorView.update([tr]);
-
-      if (tr.docChanged) {
-        changeFn(tr);
-        console.log("doc changed");
-      }
-    }
-
-    return new EditorView({
-      parent: editorElement,
-      dispatch: dispatchTransaction,
-    });
+  async function handleDocChanged(tr) {
+    let s = editor.getText();
+    await addNoteVersion(note, s);
+    await setNotes(notes);
   }
-
-  let basic = true;
-  let useTab = true;
-  let tabSize = 4;
-  let lineWrapping = true;
-  let placeholder = "";
-  let editable = true;
 
   let flashMsg = "";
-
-  function getBaseExtensions2(
-    basic,
-    useTab,
-    tabSize,
-    lineWrapping,
-    placeholder,
-    editable
-  ) {
-    /** @type {Extension[]} */
-    const res = [
-      indentUnit.of(" ".repeat(tabSize)),
-      EditorView.editable.of(editable),
-    ];
-
-    if (basic) res.push(basicSetup2);
-    if (useTab) res.push(keymap.of([indentWithTab]));
-    if (placeholder) res.push(placeholderExt(placeholder));
-    if (lineWrapping) res.push(EditorView.lineWrapping);
-
-    return res;
-  }
-  /**
-   * @param {string} s
-   * @param {string} fileName
-   * @returns {EditorState}
-   */
-  function createEditorState(s, fileName = "main.md") {
-    /** @type {Extension[]}*/
-    const exts = [
-      ...getBaseExtensions2(
-        basic,
-        useTab,
-        tabSize,
-        lineWrapping,
-        placeholder,
-        editable
-      ),
-    ];
-    // const lang = await getCMLangFromFileName(fileName);
-    // if (lang) {
-    //   exts.push(lang);
-    // }
-    return EditorState.create({
-      doc: s ?? undefined,
-      extensions: exts,
-    });
-  }
 
   /**
    * @param {string} s
    */
   async function setEditorText(s) {
-    const state = await createEditorState(s);
-    editorView.setState(state);
+    // TODO: will need to change extensions based on
+    // type of s
+    editor.setText(s);
   }
 
   function setProcessingMessage(s) {
@@ -202,7 +127,7 @@
     if (ev.key === "Enter") {
       ev.stopPropagation();
       ev.preventDefault();
-      focusEditorView(editorView);
+      editor.focus();
       return;
     }
   }
@@ -234,11 +159,11 @@
     let nNotes = len(notes);
     console.log("notes:", nNotes);
 
-    editorView = createEditorView();
+    editor = new Editor(editorElement);
+    editor.docChanged = debounce(handleDocChanged, 1000);
     document.addEventListener("keydown", onKeyDown);
 
     clearProcessingMessage();
-    setEditorText("");
 
     if (nNotes === 0) {
       await createNewNote();
@@ -250,9 +175,9 @@
     }
 
     return () => {
-      editorView = null;
       document.removeEventListener("keydown", onKeyDown);
-      setNotes(notes);
+      // TODO: probably not needed as we aggresively save on changes
+      // setNotes(notes);
     };
   });
 </script>
