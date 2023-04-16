@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	httpPort    = 9219
-	proxyURLStr = "http://localhost:3025"
+	httpPort    = 9236
+	proxyURLStr = "http://localhost:3047"
 )
 
 var (

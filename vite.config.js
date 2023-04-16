@@ -12,37 +12,10 @@ export default defineConfig({
     outDir: resolve("dist"),
     chunkSizeWarningLimit: 600000,
     rollupOptions: {
-      plugins: [
-        copy({
-          targets: [
-            { src: "./web/notepad2/*.bmp", dest: resolve("dist", "notepad2") },
-          ],
-        }),
-      ],
       input: {
-        main: resolve("web", "index.html"),
-        test: resolve("web", "test.html"),
-        // unzip
-        unzip: resolve("web", "unzip", "index.html"),
-        // wc
-        wc: resolve("web", "wc", "index.html"),
-        // image optim
-        image_resize_optimize: resolve(
-          "web",
-          "image-resize-optimize",
-          "index.html"
-        ),
-        // goplayground
-        goplayground: resolve("web", "goplayground", "index.html"),
-        // gist editor
-        gisteditor: resolve("web", "gisteditor", "index.html"),
-        gistedit: resolve("web", "gisteditor", "edit.html"),
-        nogist: resolve("web", "gisteditor", "nogist.html"),
-        github_success: resolve("web", "github_success.html"),
-        // notepad2
-        notepad2: resolve("web", "notepad2", "index.html"),
-        // calc
-        calc: resolve("web", "calc", "index.html")
+        main: resolve("web", "noted", "index.html"),
+        // test: resolve("web", "test.html"),
+        // github_success: resolve("web", "github_success.html"),
       },
 
       output: {
@@ -85,7 +58,7 @@ export default defineConfig({
   },
   server: {
     // must be same as proxyURLStr in runServerDev
-    port: 3025,
+    port: 3047,
   },
   plugins: [svelte()],
 });

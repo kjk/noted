@@ -9,7 +9,7 @@
   import { EditorState } from "@codemirror/state";
   import { debounce, len, throwIf } from "../util";
   import { basicSetup2 } from "../cmexts";
-  import { getCMLangFromFileName } from "../cmlangs";
+  // import { getCMLangFromFileName } from "../cmlangs";
   import { onMount } from "svelte";
   import { indentUnit } from "@codemirror/language";
   import { indentWithTab } from "@codemirror/commands";
@@ -145,10 +145,10 @@
         editable
       ),
     ];
-    const lang = await getCMLangFromFileName(fileName);
-    if (lang) {
-      exts.push(lang);
-    }
+    // const lang = await getCMLangFromFileName(fileName);
+    // if (lang) {
+    //   exts.push(lang);
+    // }
     return EditorState.create({
       doc: s ?? undefined,
       extensions: exts,
