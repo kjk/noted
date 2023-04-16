@@ -6,7 +6,7 @@
     "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --editor-font: "iA-Mono", "Menlo";
-  --editor-width: 800px;
+  --editor-width: 95%;
   font-family: var(--ui-font);
 }
 #sb-top {

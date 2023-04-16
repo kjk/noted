@@ -184,8 +184,10 @@
 
 <GlobalTooltip />
 
-<div class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
-  <div class=" ml-1 flex justify-between items-baseline">
+<div id="sb-root" class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
+  <div
+    class="mx-[22px] flex items-baseline max-w-[var(--editor-width)] px-[20px]"
+  >
     <div
       tabindex="0"
       use:gtooltip={"click to edit title, <b><tt>Ctrl + 1</tt></b> to switch"}
@@ -195,7 +197,7 @@
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="px-0.5 ml-[-0.125rem] block user-modify-plain grow text-xl font-semibold focus-within:outline-white bg-white"
+      class="grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white"
     />
     <div
       use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
@@ -211,12 +213,8 @@
     >
   </div>
 
-  <div class="overflow-auto">
-    <div
-      id="sb-editor"
-      class="codemirror-wrapper flex-grow"
-      bind:this={editorElement}
-    />
+  <div id="sb-main" class="overflow-auto mt-1">
+    <div id="sb-editor" class="flex-grow" bind:this={editorElement} />
   </div>
 
   {#if len(notes) === 0}

@@ -53,6 +53,7 @@ import customMarkdownStyle from "./style.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
+import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { throwIf } from "./lib/util.js";
 
 /** @typedef { import("@codemirror/state").Extension} Extension */
@@ -137,6 +138,22 @@ export class Editor {
       indentOnInput(),
       ...cleanModePlugins(this),
       EditorView.lineWrapping,
+      lineWrapper([
+        { selector: "ATXHeading1", class: "sb-line-h1" },
+        { selector: "ATXHeading2", class: "sb-line-h2" },
+        { selector: "ATXHeading3", class: "sb-line-h3" },
+        { selector: "ATXHeading4", class: "sb-line-h4" },
+        { selector: "ListItem", class: "sb-line-li", nesting: true },
+        { selector: "Blockquote", class: "sb-line-blockquote" },
+        { selector: "Task", class: "sb-line-task" },
+        { selector: "CodeBlock", class: "sb-line-code" },
+        { selector: "FencedCode", class: "sb-line-fenced-code" },
+        { selector: "Comment", class: "sb-line-comment" },
+        { selector: "BulletList", class: "sb-line-ul" },
+        { selector: "OrderedList", class: "sb-line-ol" },
+        { selector: "TableHeader", class: "sb-line-tbl-header" },
+        { selector: "FrontMatter", class: "sb-frontmatter" },
+      ]),
     ];
 
     return EditorState.create({
