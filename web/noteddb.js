@@ -1,6 +1,6 @@
-import { genRandomID, len, sha1 } from "../util";
+import { genRandomID, len, sha1 } from "./lib/util";
 
-import { KV } from "../dbutil";
+import { KV } from "./lib/dbutil";
 
 const db = new KV("noted", "keyval");
 

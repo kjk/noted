@@ -7,13 +7,13 @@
     placeholder as placeholderExt,
   } from "@codemirror/view";
   import { EditorState } from "@codemirror/state";
-  import { debounce, len, throwIf } from "../util";
-  import { basicSetup2 } from "../cmexts";
+  import { debounce, len, throwIf } from "./lib/util";
+  import { basicSetup2 } from "./lib/cmexts";
   // import { getCMLangFromFileName } from "../cmlangs";
   import { onMount } from "svelte";
   import { indentUnit } from "@codemirror/language";
   import { indentWithTab } from "@codemirror/commands";
-  import { focusEditorView } from "../cmutil";
+  import { focusEditorView } from "./lib/cmutil";
   import {
     Note,
     addNoteVersion,
@@ -22,7 +22,7 @@
     setNoteTitle,
     setNotes,
   } from "./noteddb";
-  import GlobalTooltip, { gtooltip } from "../GlobalTooltip.svelte";
+  import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
 
   let notes = [];
 

@@ -13,8 +13,9 @@ import {
   urlEncode,
 } from "./strutil";
 import { foldAll, unfoldAll } from "@codemirror/language";
-import { EditorSelection } from "@codemirror/state";
 import { getClipboard, len, setClipboard, throwIf } from "./util";
+
+import { EditorSelection } from "@codemirror/state";
 
 /**
  * @param {EditorSelection} sel

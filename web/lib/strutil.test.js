@@ -1,18 +1,18 @@
-import { describe, it } from "vitest";
-import { streq } from "./testhelpers";
-
 import {
-  b64EncodeStandard,
-  b64EncodeURLSafe,
-  b64EncodeHtmlImage,
   b64Decode,
   b64DecodeAsHex,
-  urlEncode,
-  urlDecode,
-  strCompressWS,
+  b64EncodeHtmlImage,
+  b64EncodeStandard,
+  b64EncodeURLSafe,
   parseNumFlexible,
+  strCompressWS,
+  urlDecode,
+  urlEncode,
 } from "./strutil";
+import { describe, it } from "vitest";
+
 import ist from "ist";
+import { streq } from "./testhelpers";
 
 describe("strUtils", () => {
   it("strCompressWS", () => {

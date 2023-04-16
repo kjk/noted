@@ -1,5 +1,6 @@
-import { Base64 } from "js-base64";
 import { len, throwIf } from "./util";
+
+import { Base64 } from "js-base64";
 
 /**
  * @param {string} s1

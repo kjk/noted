@@ -1,6 +1,5 @@
 <script>
-  import Spinners from "./Spinners.svelte";
-  import MenuBar from "./MenuBar.svelte";
+  import Spinners from "./lib/Spinners.svelte";
 
   function handleMenuCmd(cmd) {
     // console.log("handleMenuCmd:", cmd.detail);

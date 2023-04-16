@@ -1,8 +1,8 @@
-import { showMessage, clearMessage, showError } from "./Messages.svelte";
+import { clearMessage, showError, showMessage } from "./Messages.svelte";
 
-import { getGitHubToken } from "./github_login";
-import { startTimer } from "./util.js";
+import { getGitHubToken } from "../lib/github_login";
 import { logEvent } from "./events.js";
+import { startTimer } from "./util.js";
 
 export function addHeader(opts, key, val) {
   opts.headers = opts.headers || {};

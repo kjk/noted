@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from "svelte";
-  import { focus } from "./actions/focus";
+  import { focus } from "../actions/focus";
   import { trapFocus } from "./util";
 
   export let open = false;

@@ -1,6 +1,9 @@
 import "./base.css";
+import "./theme.css";
 
-if (location.host.includes("localhost")) {
-  let el = document.getElementById("in-progress");
-  el.classList.remove("hidden");
-}
+import App from "./Noted.svelte";
+
+const args = {
+  target: document.getElementById("app"),
+};
+export const app = new App(args);

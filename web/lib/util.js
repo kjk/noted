@@ -355,6 +355,7 @@ export function fmtNum(n, sep = ",") {
  * @returns {string}
  */
 export function notepad2Size(n) {
+  /** @type [number, string][] */
   const a = [
     [1024 * 1024 * 1024 * 1024, "TB"],
     [1024 * 1024 * 1024, "GB"],
