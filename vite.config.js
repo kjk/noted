@@ -13,31 +13,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 600000,
     rollupOptions: {
       input: {
-        main: resolve("web", "noted", "index.html"),
+        main: resolve("web", "index.html"),
         // test: resolve("web", "test.html"),
         // github_success: resolve("web", "github_success.html"),
       },
 
       output: {
         manualChunks: {
-          cm: ["codemirror"],
-          langjavascript: ["@codemirror/lang-javascript"],
-          langhtml: ["@codemirror/lang-html"],
-          langcss: ["@codemirror/lang-css"],
-          langjava: ["@codemirror/lang-java"],
-          langvue: ["@codemirror/lang-vue"],
-          langmarkdown: ["@codemirror/lang-markdown"],
-          langxml: ["@codemirror/lang-xml"],
-          langjson: ["@codemirror/lang-json"],
-          langsvelte: ["@replit/codemirror-lang-svelte"],
-
-          langrust: ["@codemirror/lang-rust"],
-          langsql: ["@codemirror/lang-sql"],
-          langpython: ["@codemirror/lang-python"],
-          langphp: ["@codemirror/lang-php"],
-          langcpp: ["@codemirror/lang-cpp"],
-
-          langlegacy: [
+          cm: [
+            "codemirror",
             "@codemirror/legacy-modes/mode/lua",
             "@codemirror/legacy-modes/mode/go",
             "@codemirror/legacy-modes/mode/diff",
@@ -46,11 +30,24 @@ export default defineConfig({
             "@codemirror/legacy-modes/mode/shell",
             "@codemirror/legacy-modes/mode/clike",
             "@codemirror/legacy-modes/mode/ruby",
-          ],
-          cmlangs: [
             // "@codemirror/lang-angular",
             // "@codemirror/lang-wast",
             "@codemirror/theme-one-dark",
+            "@codemirror/lang-javascript",
+            "@codemirror/lang-html",
+            "@codemirror/lang-css",
+            "@codemirror/lang-java",
+            "@codemirror/lang-vue",
+            "@codemirror/lang-markdown",
+            "@codemirror/lang-xml",
+            "@codemirror/lang-json",
+            "@replit/codemirror-lang-svelte",
+
+            "@codemirror/lang-rust",
+            "@codemirror/lang-sql",
+            "@codemirror/lang-python",
+            "@codemirror/lang-php",
+            "@codemirror/lang-cpp",
           ],
         },
       },

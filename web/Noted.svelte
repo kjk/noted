@@ -262,6 +262,7 @@
 <div class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
   <div class=" ml-1 flex justify-between items-baseline">
     <div
+      tabindex="0"
       use:gtooltip={"click to edit title, <b><tt>Ctrl + 1</tt></b> to switch"}
       bind:this={titleEl}
       on:keydown={onTitleKeyDown}
@@ -387,12 +388,6 @@
     left: 4px;
     bottom: 4px;
   }
-  @media screen and (max-width: 900px) {
-    .hide-if-small {
-      display: none;
-    }
-  }
-
   /* have to undo some of the taildwindcss reset */
   :global(.codemirror-wrapper) {
     height: 100%;
@@ -405,10 +400,6 @@
 
   .codemirror-wrapper :global(.cm-focused) {
     outline: none;
-  }
-  button cmd {
-    opacity: 0.4;
-    font-size: 90%;
   }
 
   .user-modify-plain {
