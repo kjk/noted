@@ -47,6 +47,7 @@ import {
 } from "./deps.js";
 
 import { basicSetup2 } from "./lib/cmexts";
+import buildMarkdown from "./markdown_parser/parser.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { throwIf } from "./lib/util.js";
@@ -105,11 +106,12 @@ export class Editor {
       ...basicSetup2,
       keymap.of([indentWithTab]),
       EditorView.lineWrapping,
+
+      markdown({
+        base: buildMarkdown([]),
+      }),
     ];
-    // const lang = await getCMLangFromFileName(fileName);
-    // if (lang) {
-    //   exts.push(lang);
-    // }
+
     return EditorState.create({
       doc: text,
       extensions: exts,
