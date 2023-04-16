@@ -1,11 +1,13 @@
 import { EditorView, ViewPlugin } from "../deps.js";
-import { safeRun } from "../../plugos/util.js";
-import { maximumAttachmentSize } from "../../common/types.js";
-import TurndownService from "https://cdn.skypack.dev/turndown@7.1.1";
 import {
   tables,
   taskListItems,
 } from "https://cdn.skypack.dev/@joplin/turndown-plugin-gfm@1.0.45";
+
+import TurndownService from "https://cdn.skypack.dev/turndown@7.1.1";
+import { maximumAttachmentSize } from "../types.js";
+import { safeRun } from "../plugos/util.js";
+
 const turndownService = new TurndownService({
   hr: "---",
   codeBlockStyle: "fenced",
