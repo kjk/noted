@@ -46,15 +46,26 @@ import {
   yamlLanguage,
 } from "./deps.js";
 
-import { basicSetup2 } from "./lib/cmexts";
+import { CodeWidgetHook } from "./hooks/code_widget.js";
 import buildMarkdown from "./markdown_parser/parser.js";
+import { cleanModePlugins } from "./cm_plugins/clean.js";
 import customMarkdownStyle from "./style.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
+import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { throwIf } from "./lib/util.js";
 
 /** @typedef { import("@codemirror/state").Extension} Extension */
 
+class Space {
+  // TODO: implement those functions
+  readAttachment(arg1, arg2) {
+    return "";
+  }
+  listPages() {
+    return [];
+  }
+}
 class PageState {
   constructor(scrollTop, selection) {
     this.scrollTop = scrollTop;
@@ -70,6 +81,10 @@ export class Editor {
   /** @type {Function} */
   docChanged;
   mdExtensions = [];
+  /** @type {Space}  */
+  space;
+  currentPage = ""; // TODO: get rid of it
+  codeWidgetHook;
 
   dispatchTransaction(tr) {
     this.editorView.update([tr]);
@@ -81,7 +96,10 @@ export class Editor {
 
   constructor(editorElement) {
     throwIf(!editorElement);
+    this.space = new Space();
+    this.codeWidgetHook = new CodeWidgetHook();
     this.editorElement = editorElement;
+
     // this.viewDispatch = () => {};
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
@@ -105,14 +123,20 @@ export class Editor {
       indentUnit.of(" ".repeat(tabSize)),
       // TODO: a different way of doing read-only
       EditorView.editable.of(!readOnly),
-      ...basicSetup2,
       keymap.of([indentWithTab]),
-      EditorView.lineWrapping,
 
       markdown({
         base: buildMarkdown(this.mdExtensions),
       }),
       syntaxHighlighting(customMarkdownStyle(this.mdExtensions)),
+      inlineImagesPlugin(this.space),
+      highlightSpecialChars(),
+      history(),
+      drawSelection(),
+      dropCursor(),
+      indentOnInput(),
+      ...cleanModePlugins(this),
+      EditorView.lineWrapping,
     ];
 
     return EditorState.create({
@@ -121,6 +145,9 @@ export class Editor {
     });
   }
 
+  async dispatchAppEvent(name, data) {
+    console.log("Editor.dispatchAppEvent:", name, data);
+  }
   /**
    * @returns {string}
    */
