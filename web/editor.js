@@ -48,6 +48,7 @@ import {
 
 import { basicSetup2 } from "./lib/cmexts";
 import buildMarkdown from "./markdown_parser/parser.js";
+import customMarkdownStyle from "./style.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { throwIf } from "./lib/util.js";
@@ -68,6 +69,7 @@ export class Editor {
   editorView;
   /** @type {Function} */
   docChanged;
+  mdExtensions = [];
 
   dispatchTransaction(tr) {
     this.editorView.update([tr]);
@@ -108,8 +110,9 @@ export class Editor {
       EditorView.lineWrapping,
 
       markdown({
-        base: buildMarkdown([]),
+        base: buildMarkdown(this.mdExtensions),
       }),
+      syntaxHighlighting(customMarkdownStyle(this.mdExtensions)),
     ];
 
     return EditorState.create({
