@@ -117,7 +117,7 @@ export class Editor {
     this.space = new Space();
     this.codeWidgetHook = new CodeWidgetHook();
     this.codeWidgetHook.add("embed", async (bodyText) => {
-      embedWidget(bodyText);
+      return embedWidget(bodyText);
     });
     this.editorElement = editorElement;
 

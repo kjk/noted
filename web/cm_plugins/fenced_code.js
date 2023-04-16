@@ -1,10 +1,12 @@
-// import { panelHtml } from "../components/panel.jsx";
 import { Decoration, WidgetType, syntaxTree } from "../deps.js";
 import {
   decoratorStateField,
   invisibleDecoration,
   isCursorInRange,
 } from "./util.js";
+
+import { panelHtml } from "../components/panel.js";
+
 class IFrameWidget extends WidgetType {
   constructor(from, to, editor, bodyText, codeWidgetCallback) {
     super();
@@ -17,8 +19,8 @@ class IFrameWidget extends WidgetType {
   toDOM() {
     console.log("toDOM");
     const iframe = document.createElement("iframe");
-    // TODO: fix this
-    // iframe.srcdoc = panelHtml;
+    // TODO: rewrite this in non-React
+    iframe.srcdoc = panelHtml;
     const messageListener = (evt) => {
       if (evt.source !== iframe.contentWindow) {
         return;

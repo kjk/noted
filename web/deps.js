@@ -99,3 +99,13 @@ export {
   javascriptLanguage,
   typescriptLanguage,
 } from "@codemirror/lang-javascript";
+
+export { Fragment, h, render as preactRender } from "preact";
+
+export { useEffect, useReducer, useRef, useState } from "preact/hooks";
+
+export {
+  Book as BookIcon,
+  Home as HomeIcon,
+  Terminal as TerminalIcon,
+} from "preact-feather";
