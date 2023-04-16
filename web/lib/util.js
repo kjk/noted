@@ -500,15 +500,15 @@ export async function filterDataTransferEntries(dt, fnAllowed = null) {
   return res;
 }
 
+const SHORT_ID_SYMBOLS =
+  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const nShortSymbols = len(SHORT_ID_SYMBOLS);
+
 /**
  * @param {number} n
  * @returns {string}
  */
 export function genRandomID(n) {
-  const SHORT_ID_SYMBOLS =
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const nShortSymbols = len(SHORT_ID_SYMBOLS);
-
   let res = "";
   for (let i = 0; i < n; i++) {
     const idx = Math.floor(Math.random() * nShortSymbols);

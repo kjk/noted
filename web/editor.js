@@ -50,6 +50,7 @@ import {
   pasteLinkExtension,
 } from "./cm_plugins/editor_paste.js";
 
+import { SlashCommandHook } from "./hooks/slash_command.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
 import customMarkdownStyle from "./style.js";
@@ -103,6 +104,7 @@ export class Editor {
   space;
   currentPage = ""; // TODO: get rid of it
   codeWidgetHook;
+  slashCommandHook;
 
   dispatchTransaction(tr) {
     this.editorView.update([tr]);
@@ -114,12 +116,13 @@ export class Editor {
 
   constructor(editorElement) {
     throwIf(!editorElement);
+    this.editorElement = editorElement;
     this.space = new Space();
     this.codeWidgetHook = new CodeWidgetHook();
     this.codeWidgetHook.add("embed", async (bodyText) => {
       return embedWidget(bodyText);
     });
-    this.editorElement = editorElement;
+    this.slashCommandHook = new SlashCommandHook(this);
 
     // this.viewDispatch = () => {};
     this.editorView = new EditorView({
@@ -274,6 +277,13 @@ export class Editor {
         addKeymap: true,
       }),
       syntaxHighlighting(customMarkdownStyle(this.mdExtensions)),
+      autocompletion({
+        override: [
+          this.slashCommandHook.slashCommandCompleter.bind(
+            this.slashCommandHook
+          ),
+        ],
+      }),
       inlineImagesPlugin(this.space),
       highlightSpecialChars(),
       history(),

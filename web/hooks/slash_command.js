@@ -1,4 +1,4 @@
-import { safeRun } from "../../common/util.js";
+import { safeRun } from "../plugos/util.js";
 import { syntaxTree } from "../deps.js";
 const slashCommandRegexp = /([^\w:]|^)\/[\w\-]*/;
 export class SlashCommandHook {
@@ -30,6 +30,7 @@ export class SlashCommandHook {
     if (!prefix) {
       return null;
     }
+    console.log("slashCommandCompleter:", ctx, "prefix:", prefix);
     const prefixText = prefix.text;
     const options = [];
     const currentNode = syntaxTree(ctx.state).resolveInner(ctx.pos);
