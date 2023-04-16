@@ -12,7 +12,8 @@ export {
   completionKeymap,
 } from "@codemirror/autocomplete";
 export { styleTags, Tag, tagHighlighter, tags } from "@lezer/highlight";
-export * as YAML from "https://deno.land/std@0.177.0/encoding/yaml.js";
+export * as YAML from "yaml";
+// export * as YAML from "https://deno.land/std@0.177.0/encoding/yaml.js";
 // export * as path from "https://deno.land/std@0.177.0/path/mod.js";
 // export { readAll } from "https://deno.land/std@0.165.0/streams/conversion.js";
 export {

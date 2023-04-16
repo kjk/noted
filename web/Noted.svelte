@@ -131,9 +131,9 @@
   /**
    * @param {string} s
    * @param {string} fileName
-   * @returns {Promise<EditorState>}
+   * @returns {EditorState}
    */
-  async function createEditorState(s, fileName = "main.md") {
+  function createEditorState(s, fileName = "main.md") {
     /** @type {Extension[]}*/
     const exts = [
       ...getBaseExtensions2(
@@ -286,7 +286,11 @@
   </div>
 
   <div class="overflow-auto">
-    <div class="codemirror-wrapper flex-grow" bind:this={editorElement} />
+    <div
+      id="sb-editor"
+      class="codemirror-wrapper flex-grow"
+      bind:this={editorElement}
+    />
   </div>
 
   {#if len(notes) === 0}
