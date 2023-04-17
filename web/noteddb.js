@@ -1,4 +1,4 @@
-import { genRandomID, len, sha1 } from "./lib/util";
+import { genRandomID, len, sha1, throwIf } from "./lib/util";
 
 import { KV } from "./lib/dbutil";
 
@@ -11,12 +11,28 @@ export class Note {
   type = "md";
   dailyNote = false;
   immutableTitle = false;
-  /** @type [string][] */ // array of sha1
+  /** @type {string[]} */ // array of sha1
   versions = [];
 
   constructor(title) {
     this.noteId = genRandomID(8);
     this.title = title;
+  }
+}
+
+/**
+ * @param {Note2} n
+ * @returns {Note}
+ */
+function toNote(n) {
+  let idx = n.valueOf();
+  return realNotes[idx];
+}
+
+export class Note2 extends Number {
+  get title() {
+    let n = toNote(this);
+    return n.title;
   }
 }
 
@@ -35,30 +51,49 @@ export function noteGetID(note) {
 const keyPrefixContent = "content:"; // + sha1(content)
 const keyNotes = "notes";
 
+/** @type {Note2[]} */
 let cachedNotes = [];
 
+/**  @type { Note[]} */
+let realNotes = [];
+
 /**
- * @returns {Promise<Note[]>}
+ * @returns {Promise<Note2[]>}
  */
 export async function getNotes() {
   if (len(cachedNotes) > 0) {
     return cachedNotes;
+    j;
   }
+  /** @types {Note[]} */
   let res = (await db.get(keyNotes)) || [];
   console.log("getNotes:", res);
-  cachedNotes = res;
-  return res;
+  realNotes = res;
+  let n = len(realNotes);
+  throwIf(len(cachedNotes) > 0);
+  for (let i = 0; i < n; i++) {
+    let n = new Note2(i);
+    cachedNotes.push(n);
+  }
+  return cachedNotes;
 }
 
 /**
  * @param {Note[]} notes
  */
-export async function setNotes(notes) {
+async function saveNotes(notes) {
   console.log("setNotes:", notes);
   await db.set(keyNotes, notes);
 }
 
-export async function addNoteVersion(note, content) {
+/**
+ *
+ * @param {Note2} n
+ * @param {string} content
+ * @returns {Promise<Note2[]>}
+ */
+export async function addNoteVersion(n, content) {
+  let note = toNote(n);
   console.log("addNoteVersion:", note, len(content));
   let hash = await sha1(content);
   let key = keyPrefixContent + hash;
@@ -68,80 +103,59 @@ export async function addNoteVersion(note, content) {
     console.log(e);
   }
   note.versions.push(hash);
-  await setNotes(cachedNotes);
+  await saveNotes(realNotes);
   return cachedNotes;
 }
 
+/**
+ *
+ * @param {string} title
+ * @param {string} type
+ * @returns {Promise<Note2>}
+ */
 export async function newNote(title, type = "md") {
   let note = new Note();
   note.title = title;
   note.type = type;
-  cachedNotes.push(note);
-  await setNotes(cachedNotes);
-  return note;
+  let idx = len(realNotes);
+  let n = new Note2(idx);
+  realNotes.push(note);
+  await saveNotes(realNotes);
+  cachedNotes.push(n);
+  return n;
 }
 
-export async function setNoteTitle(note, title) {
+/**
+ *
+ * @param {Note2} n
+ * @param {string} title
+ * @returns {Promise<Note2[]>}
+ */
+export async function setNoteTitle(n, title) {
+  let note = realNotes[n.valueOf()];
   console.log(`setNoteTitle: curr: '${note.title}', new: '${title}'`);
   if (note.title === title) {
     return;
   }
   note.title = title;
-  await setNotes(cachedNotes);
+  await saveNotes(realNotes);
   return cachedNotes;
 }
 
 /**
- * @param {Note} note
+ * @param {Note2} n
  * @returns {Promise<string>}
  */
-export async function getNoteCurrentVersion(note) {
+export async function getNoteCurrentVersion(n) {
+  let note = toNote(n);
   console.log("getNoteCurrentVersion:", note);
-  let n = len(note.versions);
-  if (n === 0) {
+  let nNotes = len(note.versions);
+  if (nNotes === 0) {
     return "";
   }
-  let hash = note.versions[n - 1];
+  let hash = note.versions[nNotes - 1];
   let key = keyPrefixContent + hash;
   /** @type {string} */
   let content = await db.get(key);
   return content;
 }
-
-// /** @type {import("svelte/store").Writable<Note[]>} */
-// export let notes = makeIndexedDBStore(db, "notes", [], false, true);
-
-// export async function addNoteVersion(note, content) {
-//   console.log("addNoteVersion:", note, len(content));
-//   let hash = sha1(content);
-//   let key = keyPrefixContent + hash;
-//   await db.add(key, content);
-//   note.versions.push(hash);
-//   resaveStore(notes);
-// }
-
-// export function setNoteTitle(note, title) {
-//   console.log(`setNoteTitle: curr: '${note.title}', new: '${title}'`);
-//   if (note.title === title) {
-//     return;
-//   }
-//   note.title = title;
-//   resaveStore(notes);
-// }
-
-// /**
-//  * @param {Note} note
-//  * @returns {Promise<string>}
-//  */
-// export async function getNoteCurrentVersion(note) {
-//   console.log("getNoteCurrentVersion:", note);
-//   let n = len(note.versions);
-//   if (n === 0) {
-//     return "";
-//   }
-//   let hash = note.versions[n - 1];
-//   let key = keyPrefixContent + hash;
-//   /** @type {string} */
-//   let content = await db.get(key);
-//   return content;
-// }
