@@ -5,7 +5,12 @@
   --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --editor-font: "iA-Mono", "Menlo";
+  /* --editor-font: "iA-Mono", "Menlo"; */
+  --editor-font: "iA-Mono", "Cascadia Code2", "Cascadia Mono2",
+    "Lucida Console2", "Consolas", -apple-system, system-ui, BlinkMacSystemFont,
+    "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+
   --editor-width: 95%;
   font-family: var(--ui-font);
 }
@@ -237,7 +242,7 @@
   background-color: rgba(255, 255, 0, 0.5);
 }
 #sb-editor .sb-line-fenced-code {
-  background-color: rgba(72, 72, 72, 0.1);
+  background-color: rgba(72, 72, 72, 0.05);
   /* Mostly for JS when that comes back */
 }
 #sb-editor .sb-line-fenced-code .sb-code {
@@ -376,7 +381,7 @@
   display: block;
   float: right;
   color: #000;
-  opacity: 0.25;
+  opacity: 0.5;
   font-size: 90%;
   padding-right: 7px;
 }
