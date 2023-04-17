@@ -1,4 +1,7 @@
-import { syscall } from "$sb/silverbullet-syscall/syscall.js";
+import buildMarkdown from "../../markdown_parser/parser";
+import { parse } from "../../markdown_parser/parse_tree.js";
+let lang = buildMarkdown([]);
+
 export function parseMarkdown(text) {
-  return syscall("markdown.parseMarkdown", text);
+  return parse(lang, text);
 }

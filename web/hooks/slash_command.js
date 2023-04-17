@@ -25,6 +25,17 @@ export class SlashCommandHook {
       }
     }
   }
+  add(name, def, func) {
+    console.log("SlashCommandHook.add:", def, "name:", name, "func:", func);
+    this.slashCommands.set(def.name, {
+      slashCommand: def,
+      run: () => {
+        console.log("running command:", def, "name:", name, "func:", func);
+        func(def);
+      },
+    });
+  }
+
   slashCommandCompleter(ctx) {
     const prefix = ctx.matchBefore(slashCommandRegexp);
     if (!prefix) {

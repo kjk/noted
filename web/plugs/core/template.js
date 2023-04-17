@@ -1,8 +1,14 @@
-import { editor, markdown, space } from "$sb/silverbullet-syscall/mod.js";
-import { extractFrontmatter } from "$sb/lib/frontmatter.js";
-import { renderToText } from "$sb/lib/tree.js";
-import { niceDate } from "$sb/lib/dates.js";
-import { readSettings } from "$sb/lib/settings_page.js";
+import {
+  editor,
+  markdown,
+  space,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
+import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+import { niceDate } from "../../plug-api/lib/dates.js";
+import { readSettings } from "../../plug-api/lib/settings_page.js";
+import { renderToText } from "../../plug-api/lib/tree.js";
+
 export async function instantiateTemplateCommand() {
   const allPages = await space.listPages();
   const { pageTemplatePrefix } = await readSettings({

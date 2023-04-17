@@ -1,7 +1,9 @@
-import { readYamlPage } from "./yaml_page.js";
-import { notifyUser } from "./util.js";
 import * as YAML from "yaml";
-import { space } from "$sb/silverbullet-syscall/mod.js";
+
+import { notifyUser } from "./util.js";
+import { readYamlPage } from "./yaml_page.js";
+import { space } from "../silverbullet-syscall/mod.js";
+
 const SETTINGS_PAGE = "SETTINGS";
 export async function readSettings(settings) {
   try {

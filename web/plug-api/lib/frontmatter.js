@@ -1,11 +1,13 @@
 import * as YAML from "yaml";
+
 import {
   addParentPointers,
   findNodeOfType,
   renderToText,
   replaceNodesMatching,
   traverseTree,
-} from "$sb/lib/tree.js";
+} from "../lib/tree.js";
+
 export function extractFrontmatter(tree, removeKeys = []) {
   let data = {};
   addParentPointers(tree);

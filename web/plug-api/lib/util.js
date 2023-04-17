@@ -1,4 +1,4 @@
-import { editor } from "$sb/silverbullet-syscall/mod.js";
+import { editor } from "../silverbullet-syscall/mod.js";
 export async function replaceAsync(str, regex, asyncFn) {
   const promises = [];
   str.replace(regex, (match, ...args) => {

@@ -109,3 +109,5 @@ export {
   Home as HomeIcon,
   Terminal as TerminalIcon,
 } from "preact-feather";
+
+export { getCM as vimGetCm, Vim, vim } from "@replit/codemirror-vim";

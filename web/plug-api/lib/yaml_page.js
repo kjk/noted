@@ -1,6 +1,8 @@
-import { findNodeOfType, traverseTree } from "$sb/lib/tree.js";
-import { markdown, space } from "$sb/silverbullet-syscall/mod.js";
 import * as YAML from "yaml";
+
+import { findNodeOfType, traverseTree } from "../lib/tree.js";
+import { markdown, space } from "../silverbullet-syscall/mod.js";
+
 export async function readCodeBlockPage(pageName, allowedLanguages) {
   const text = await space.readPage(pageName);
   const tree = await markdown.parseMarkdown(text);
@@ -41,8 +43,7 @@ export async function readYamlPage(pageName, allowedLanguages = ["yaml"]) {
   }
 }
 export async function writeYamlPage(pageName, data, prelude = "") {
-  const text = YAML.stringify(data, {
-    noCompatMode: true,
-  });
+  //    noCompatMode: true,
+  const text = YAML.stringify(data, {});
   await space.writePage(pageName, prelude + "```yaml\n" + text + "\n```");
 }

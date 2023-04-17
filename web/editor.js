@@ -51,14 +51,17 @@ import {
 } from "./cm_plugins/editor_paste.js";
 
 import { SlashCommandHook } from "./hooks/slash_command.js";
+import { applyLineReplace } from "./plugs/core/template.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
 import customMarkdownStyle from "./style.js";
+import { editorSyscalls } from "./syscalls/editor.js";
 import { embedWidget } from "./plugs/core/embed.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
+import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { throwIf } from "./lib/util.js";
 
 // import { CodeWidgetHook } from "./hooks/code_widget.js";
@@ -124,6 +127,17 @@ export class Editor {
     });
     this.slashCommandHook = new SlashCommandHook(this);
 
+    this.slashCommandHook.add(
+      "makeH3",
+      {
+        name: "h3",
+        description: "Turn line into h3 header",
+        match: "^#*\\s*",
+        replace: "### ",
+      },
+      applyLineReplace
+    );
+
     // this.viewDispatch = () => {};
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
@@ -132,6 +146,9 @@ export class Editor {
         this.dispatchTransaction(tr);
       },
     });
+
+    let syscall = editorSyscalls(this);
+    setEdiotrSyscall(syscall);
   }
 
   /**

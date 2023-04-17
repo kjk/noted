@@ -1,4 +1,17 @@
-import { syscall } from "./syscall.js";
+let syscalls;
+
+let ctx = "editor.js context";
+
+export function setEdiotrSyscall(c) {
+  syscalls = c;
+}
+
+function syscall(name, ...args) {
+  let fn = syscalls[name];
+  console.log("syscall:", name, fn);
+  return fn.call(this, ctx, ...args);
+}
+
 export function getCurrentPage() {
   return syscall("editor.getCurrentPage");
 }
