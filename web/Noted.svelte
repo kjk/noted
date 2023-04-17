@@ -1,5 +1,6 @@
 <script>
   /** @typedef { import("@codemirror/state").Extension} Extension */
+  /** @typedef {import("./noteddb").Note2} Note2 */
 
   import {
     EditorView,
@@ -35,7 +36,7 @@
   let statusMsg = "";
   let errorMsg = "";
 
-  /** @type {import("./noteddb").Note} */
+  /** @type {import("./noteddb").Note2} */
   let note;
 
   let title;
@@ -138,7 +139,7 @@
   }
 
   /**
-   * @param {Note} n
+   * @param {Note2} n
    */
   function openNote(n) {
     note = n;

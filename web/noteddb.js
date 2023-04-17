@@ -63,7 +63,6 @@ let realNotes = [];
 export async function getNotes() {
   if (len(cachedNotes) > 0) {
     return cachedNotes;
-    j;
   }
   /** @types {Note[]} */
   let res = (await db.get(keyNotes)) || [];
