@@ -18,8 +18,9 @@
     addNoteVersion,
     getNoteCurrentVersion,
     getNotes,
+    newNote,
+    noteGetTite,
     setNoteTitle,
-    setNotes,
   } from "./noteddb";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -52,7 +53,6 @@
     }
     console.log("titleChanged:", title);
     setNoteTitle(note, title);
-    await setNotes(notes);
     notes = notes;
   }
 
@@ -74,7 +74,6 @@
   async function handleDocChanged(tr) {
     let s = editor.getText();
     await addNoteVersion(note, s);
-    await setNotes(notes);
   }
 
   let flashMsg = "";
@@ -132,15 +131,6 @@
     }
   }
 
-  async function newNote(title, type = "md") {
-    let note = new Note();
-    note.title = title;
-    note.type = type;
-    notes.push(note);
-    await setNotes(notes);
-    return note;
-  }
-
   async function createNewNote() {
     console.log("createNewNote");
     note = await newNote("");
@@ -167,10 +157,12 @@
 
     if (nNotes === 0) {
       await createNewNote();
+      notes = await getNotes();
     } else {
       note = notes[nNotes - 1];
       for (let n of notes) {
-        console.log(n.title);
+        let title = noteGetTite(n);
+        console.log(n);
       }
     }
 
@@ -213,8 +205,12 @@
     >
   </div>
 
-  <div id="sb-main" class="overflow-auto mt-1">
-    <div id="sb-editor" class="flex-grow" bind:this={editorElement} />
+  <div id="sb-main" class="overflow-hidden mt-1">
+    <div
+      id="sb-editor"
+      class="flex-grow overflow-auto"
+      bind:this={editorElement}
+    />
   </div>
 
   {#if len(notes) === 0}
@@ -224,10 +220,11 @@
       <div>Recent notes:</div>
       {#each notes as n, i}
         {@const n2 = notes[len(notes) - 1 - i]}
+        {@const title = noteGetTite(n2)}
         {#if i < 4}
           <button
             class="underline max-w-[6rem] truncate"
-            on:click={() => openNote(n2)}>{n2.title}</button
+            on:click={() => openNote(n2)}>{title}</button
           >
           {#if i < 3}
             <!-- <div>&bull;</div> -->

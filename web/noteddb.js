@@ -20,15 +20,33 @@ export class Note {
   }
 }
 
+export function noteGetTite(note) {
+  return note.title;
+}
+
+export function noteGetType(note) {
+  return note.type;
+}
+
+export function noteGetID(note) {
+  return note.noteId;
+}
+
 const keyPrefixContent = "content:"; // + sha1(content)
 const keyNotes = "notes";
+
+let cachedNotes = [];
 
 /**
  * @returns {Promise<Note[]>}
  */
 export async function getNotes() {
+  if (len(cachedNotes) > 0) {
+    return cachedNotes;
+  }
   let res = (await db.get(keyNotes)) || [];
   console.log("getNotes:", res);
+  cachedNotes = res;
   return res;
 }
 
@@ -50,14 +68,27 @@ export async function addNoteVersion(note, content) {
     console.log(e);
   }
   note.versions.push(hash);
+  await setNotes(cachedNotes);
+  return cachedNotes;
 }
 
-export function setNoteTitle(note, title) {
+export async function newNote(title, type = "md") {
+  let note = new Note();
+  note.title = title;
+  note.type = type;
+  cachedNotes.push(note);
+  await setNotes(cachedNotes);
+  return note;
+}
+
+export async function setNoteTitle(note, title) {
   console.log(`setNoteTitle: curr: '${note.title}', new: '${title}'`);
   if (note.title === title) {
     return;
   }
   note.title = title;
+  await setNotes(cachedNotes);
+  return cachedNotes;
 }
 
 /**
