@@ -350,7 +350,7 @@
 }
 #sb-editor .sb-directive-start-outside .sb-directive-placeholder {
   color: var(--directive-font-color) !important;
-  opacity: 0.25;
+  opacity: 0.5;
   padding-right: 7px;
   float: right;
   font-size: 80%;
