@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 )
@@ -125,10 +127,17 @@ func cmdRunLoggedMust(cmd *exec.Cmd) {
 }
 
 func deploy() {
-	cmd := exec.Command("git", "rebase", "deploy", "main")
-	cmdRunLoggedMust(cmd)
-	cmd = exec.Command("git", "push", "deploy")
-	cmdRunLoggedMust(cmd)
+	uri := os.Getenv("NOTED_DEPLOY_URL")
+	if uri == "" {
+		logf(ctx(), "deply: NOTED_DEPLOY_URL env varialbe note found\n")
+		return
+	}
+	rsp, err := http.DefaultClient.Get(uri)
+	must(err)
+	defer rsp.Body.Close()
+	d, err := io.ReadAll(rsp.Body)
+	must(err)
+	logf(ctx(), "%s\n", string(d))
 }
 
 func build() {
