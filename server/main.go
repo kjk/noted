@@ -14,28 +14,28 @@ var (
 )
 
 func getSecretsFromEnv() {
-	axiomApiToken = os.Getenv("ONLINETOOL_AXIOM_TOKEN")
+	axiomApiToken = os.Getenv("NOTED_AXIOM_TOKEN")
 	if len(axiomApiToken) != 41 {
 		logf(ctx(), "Axiom token missing or invalid length\n")
 		axiomApiToken = ""
 	} else {
 		logf(ctx(), "Got axiom token\n")
 	}
-	pirschClientSecret = os.Getenv("ONLINETOOL_PIRSCH_SECRET")
+	pirschClientSecret = os.Getenv("NOTED_PIRSCH_SECRET")
 	if len(pirschClientSecret) != 64 {
 		logf(ctx(), "Pirsch secret missing or invalid length\n")
 		pirschClientSecret = ""
 	} else {
 		logf(ctx(), "Got pirsch token\n")
 	}
-	secretGitHub = os.Getenv("ONLINETOOL_GITHUB_SECRET")
+	secretGitHub = os.Getenv("NOTED_GITHUB_SECRET")
 	if len(secretGitHub) != 40 {
 		logf(ctx(), "GitHub secret missing or invalid length\n")
 		secretGitHub = ""
 	} else {
 		logf(ctx(), "Got GitHub secret\n")
 	}
-	secretGitHubLocal = os.Getenv("ONLINETOOL_GITHUB_SECRET_LOCAL")
+	secretGitHubLocal = os.Getenv("NOTED_GITHUB_SECRET_LOCAL")
 	if len(secretGitHubLocal) != 40 {
 		logf(ctx(), "GitHub Local secret missing or invalid length\n")
 		secretGitHubLocal = ""
