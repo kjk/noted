@@ -1,6 +1,5 @@
+import { KV, createKVStoresDB } from "./lib/dbutil";
 import { genRandomID, len, throwIf } from "./lib/util";
-
-import { KV } from "./lib/dbutil";
 
 const kLogEntriesPerKey = 1024;
 
@@ -59,10 +58,7 @@ function mkLogDeleteNote(id) {
 // derives from string, valueOf() is id
 export class Note extends String {}
 
-const dbContent = new KV("noted2", "content", 1);
-const dbNotes = new KV("noted3", "notes", 1);
-
-export class StoreLocal {
+class StoreCommon {
   // this is reconstructed from log entries
   // TODO: for even more efficiency, use array of arrays
   // to avoid re-allocations. Can pre-allocate e.g.
@@ -75,24 +71,6 @@ export class StoreLocal {
 
   /** @type {Note[]} */
   notes = [];
-
-  // database for storing content of notes
-  // the key is random 12-byte id and the value is
-  // string or binary content
-  /** @type {KV} */
-  dbContent;
-  // database for storing log entries under multiple keys
-  // we store kLogEntriesPerKey in each key
-  /** @type {KV} */
-  dbNotes;
-
-  currKey = "log:0";
-  currLogs = [];
-
-  constructor() {
-    this.dbContent = dbContent;
-    this.dbNotes = dbNotes;
-  }
 
   applyLog(log) {
     // console.log("applyLog", log);
@@ -162,6 +140,29 @@ export class StoreLocal {
       throw new Error(`unknown log op ${op}`);
     }
   }
+}
+
+export class StoreLocal extends StoreCommon {
+  db;
+  // database for storing content of notes
+  // the key is random 12-byte id and the value is
+  // string or binary content
+  /** @type {KV} */
+  kvContent;
+  // database for storing log entries under multiple keys
+  // we store kLogEntriesPerKey in each key
+  /** @type {KV} */
+  kvNotes;
+
+  currKey = "log:0";
+  currLogs = [];
+
+  constructor() {
+    super();
+    this.db = createKVStoresDB("noted2", ["content", "notes"]);
+    this.kvContent = new KV(this.db, "content");
+    this.kvNotes = new KV(this.db, "notes");
+  }
 
   /**
    * @returns {Promise<Note[]>}
@@ -170,7 +171,7 @@ export class StoreLocal {
     if (len(this.notes) > 0) {
       return this.notes;
     }
-    let keys = await this.dbNotes.keys();
+    let keys = await this.kvNotes.keys();
     if (len(keys) == 0) {
       return [];
     }
@@ -179,7 +180,7 @@ export class StoreLocal {
       // console.log("key:", key);
       // @ts-ignore
       this.currKey = key;
-      this.currLogs = await this.dbNotes.get(key);
+      this.currLogs = await this.kvNotes.get(key);
       for (let log of this.currLogs) {
         this.applyLog(log);
       }
@@ -191,7 +192,7 @@ export class StoreLocal {
     // console.log("appendLog:", log, "size:", len(this.currLogs));
     this.currLogs.push(log);
     // console.log("currLogs:", this.currLogs);
-    await this.dbNotes.set(this.currKey, this.currLogs);
+    await this.kvNotes.set(this.currKey, this.currLogs);
     let nLogs = len(this.currLogs);
     if (nLogs >= kLogEntriesPerKey) {
       let currId = parseInt(this.currKey.substring(4));
@@ -217,14 +218,14 @@ export class StoreLocal {
     if (!contentId) {
       return null;
     }
-    return await this.dbContent.get(contentId);
+    return await this.kvContent.get(contentId);
   }
 
   async noteAddVersion(note, content) {
     let id = note.valueOf();
     let contentId = genRandomID(12);
     let log = mkLogChangeContent(id, contentId);
-    await this.dbContent.set(contentId, content);
+    await this.kvContent.set(contentId, content);
     await this.appendLog(log);
   }
 

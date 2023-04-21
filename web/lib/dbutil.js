@@ -2,22 +2,31 @@ import { get } from "svelte/store";
 import { len } from "./util";
 import { openDB } from "idb";
 
+export function createKVStoresDB(dbName, stores, ver = 1) {
+  console.log("createKVStoresDB:", dbName, stores, ver);
+  let dbPromise = openDB(dbName, ver, {
+    upgrade(db) {
+      console.log("upgrade:", dbName, stores, ver);
+      if (typeof stores === "string") {
+        stores = [stores];
+      }
+      for (let storeName of stores) {
+        db.createObjectStore(storeName);
+        console.log("upgrade: createObjectStore:", storeName);
+      }
+    },
+  });
+  return dbPromise;
+}
+
 export class KV {
-  dbName;
   storeName;
   dbPromise;
 
-  constructor(dbName, storeName, ver = 1) {
-    this.dbName = dbName;
+  constructor(db, storeName, ver = 1) {
+    this.dbPromise = db;
     this.storeName = storeName;
     // console.log("KV:", dbName, storeName);
-    this.dbPromise = openDB(dbName, ver, {
-      upgrade(db) {
-        // console.log("upgrade");
-        db.createObjectStore(storeName);
-        // console.log("upgrade: after createObjectStore");
-      },
-    });
   }
 
   async getDb() {
