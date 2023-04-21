@@ -36,7 +36,7 @@ export class Note2 extends Number {
   }
 }
 
-export function noteGetTite(note) {
+export function noteGetTitle(note) {
   return note.title;
 }
 
@@ -91,9 +91,9 @@ async function saveNotes(notes) {
  * @param {string} content
  * @returns {Promise<Note2[]>}
  */
-export async function addNoteVersion(n, content) {
+export async function noteAddVersion(n, content) {
   let note = toNote(n);
-  console.log("addNoteVersion:", note, len(content));
+  console.log("noteAddVersion:", note, len(content));
   let hash = await sha1(content);
   let key = keyPrefixContent + hash;
   try {
@@ -130,9 +130,9 @@ export async function newNote(title, type = "md") {
  * @param {string} title
  * @returns {Promise<Note2[]>}
  */
-export async function setNoteTitle(n, title) {
+export async function noteSetTitle(n, title) {
   let note = realNotes[n.valueOf()];
-  console.log(`setNoteTitle: curr: '${note.title}', new: '${title}'`);
+  console.log(`noteSetTitle: curr: '${note.title}', new: '${title}'`);
   if (note.title === title) {
     return;
   }
@@ -145,9 +145,9 @@ export async function setNoteTitle(n, title) {
  * @param {Note2} n
  * @returns {Promise<string>}
  */
-export async function getNoteCurrentVersion(n) {
+export async function noteGetCurrentVersion(n) {
   let note = toNote(n);
-  console.log("getNoteCurrentVersion:", note);
+  console.log("noteGetCurrentVersion:", note);
   let nNotes = len(note.versions);
   if (nNotes === 0) {
     return "";

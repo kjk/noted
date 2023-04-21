@@ -2,26 +2,16 @@
   /** @typedef { import("@codemirror/state").Extension} Extension */
   /** @typedef {import("./noteddb").Note2} Note2 */
 
-  import {
-    EditorView,
-    keymap,
-    placeholder as placeholderExt,
-  } from "@codemirror/view";
-  import { EditorState } from "@codemirror/state";
-  import { debounce, len, throwIf } from "./lib/util";
-  import { basicSetup2 } from "./lib/cmexts";
+  import { debounce, len } from "./lib/util";
   import { onMount } from "svelte";
-  import { indentUnit } from "@codemirror/language";
-  import { indentWithTab } from "@codemirror/commands";
-  import { focusEditorView } from "./lib/cmutil";
   import {
     Note,
-    addNoteVersion,
-    getNoteCurrentVersion,
+    noteAddVersion,
+    noteGetCurrentVersion,
     getNotes,
     newNote,
-    noteGetTite,
-    setNoteTitle,
+    noteGetTitle,
+    noteSetTitle,
   } from "./noteddb";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -53,7 +43,7 @@
       return;
     }
     console.log("titleChanged:", title);
-    setNoteTitle(note, title);
+    noteSetTitle(note, title);
     notes = notes;
   }
 
@@ -62,8 +52,8 @@
       return;
     }
     console.log("noteChanged:", note);
-    title = note.title;
-    let s = await getNoteCurrentVersion(note);
+    title = noteGetTitle(note);
+    let s = await noteGetCurrentVersion(note);
     setEditorText(s);
   }
 
@@ -74,7 +64,7 @@
 
   async function handleDocChanged(tr) {
     let s = editor.getText();
-    await addNoteVersion(note, s);
+    await noteAddVersion(note, s);
   }
 
   let flashMsg = "";
@@ -162,7 +152,7 @@
     } else {
       note = notes[nNotes - 1];
       for (let n of notes) {
-        let title = noteGetTite(n);
+        let title = noteGetTitle(n);
         console.log(n);
       }
     }
@@ -221,7 +211,7 @@
       <div>Recent notes:</div>
       {#each notes as n, i}
         {@const n2 = notes[len(notes) - 1 - i]}
-        {@const title = noteGetTite(n2)}
+        {@const title = noteGetTitle(n2)}
         {#if i < 4}
           <button
             class="underline max-w-[6rem] truncate"
