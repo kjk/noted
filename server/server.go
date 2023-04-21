@@ -171,8 +171,8 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		}
 
-		if strings.HasPrefix(uri, "/api/goplay/") {
-			handleGoPlayground(w, r)
+		if strings.HasPreifx(uri, "/api/kv/") {
+			handleStore(w, r)
 			return
 		}
 

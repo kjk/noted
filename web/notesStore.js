@@ -259,28 +259,28 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeKeys(storeName) {
-    let uri = "/api/kv/keys?storeName=" + storeName;
+    let uri = "/api/kv/keys?store=" + storeName;
     let resp = await fetch(uri);
     let keys = await resp.json();
     return keys;
   }
 
   async storeGetJSON(storeName, key) {
-    let uri = "/api/kv/getJSON?storeName=" + storeName + "&key=" + key;
+    let uri = "/api/kv/getJSON?store=" + storeName + "&key=" + key;
     let resp = await fetch(uri);
     let value = await resp.json();
     return value;
   }
 
   async storeGetBlob(storeName, key) {
-    let uri = "/api/kv/getBlob?storeName=" + storeName + "&key=" + key;
+    let uri = "/api/kv/getBlob?store=" + storeName + "&key=" + key;
     let resp = await fetch(uri);
     let value = await resp.blob();
     return value;
   }
 
   async storeSetJSON(storeName, key, value) {
-    let uri = "/api/kv/setJSON?storeName=" + storeName + "&key=" + key;
+    let uri = "/api/kv/setJSON?store=" + storeName + "&key=" + key;
     let resp = await fetch(uri, {
       method: "POST",
       body: JSON.stringify(value),
@@ -290,7 +290,7 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeSetBlob(storeName, key, value) {
-    let uri = "/api/kv/setBlob?storeName=" + storeName + "&key=" + key;
+    let uri = "/api/kv/setBlob?store=" + storeName + "&key=" + key;
     let resp = await fetch(uri, {
       method: "POST",
       body: value,
