@@ -6,71 +6,37 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
+
+	"github.com/go-redis/redis"
 )
 
 var (
-	secretGitHub      = ""
-	secretGitHubLocal = ""
+	secretGitHub = ""
 )
 
 func getSecretsFromEnv() {
-	axiomApiToken = os.Getenv("NOTED_AXIOM_TOKEN")
-	if len(axiomApiToken) != 41 {
-		logf(ctx(), "Axiom token missing or invalid length\n")
-		axiomApiToken = ""
-	} else {
-		logf(ctx(), "Got axiom token\n")
-	}
-	pirschClientSecret = os.Getenv("NOTED_PIRSCH_SECRET")
-	if len(pirschClientSecret) != 64 {
-		logf(ctx(), "Pirsch secret missing or invalid length\n")
-		pirschClientSecret = ""
-	} else {
-		logf(ctx(), "Got pirsch token\n")
-	}
-	secretGitHub = os.Getenv("NOTED_GITHUB_SECRET")
-	if len(secretGitHub) != 40 {
-		logf(ctx(), "GitHub secret missing or invalid length\n")
-		secretGitHub = ""
-	} else {
-		logf(ctx(), "Got GitHub secret\n")
-	}
-	secretGitHubLocal = os.Getenv("NOTED_GITHUB_SECRET_LOCAL")
-	if len(secretGitHubLocal) != 40 {
-		logf(ctx(), "GitHub Local secret missing or invalid length\n")
-		secretGitHubLocal = ""
-	} else {
-		logf(ctx(), "Got GitHub local secret\n")
-	}
-	upstashDb = os.Getenv("NOTED_UPSTASH_DB")
-	if len(upstashDb) < 10 {
-		logf(ctx(), "NOTED_UPSTASH_DB missing\n")
-		upstashDb = ""
-	} else {
-		logf(ctx(), "Got NOTED_UPSTASH_DB")
-	}
-	upstashDbPwd = os.Getenv("NOTED_UPSTASH_DB_PWD")
-	if len(upstashDbPwd) < 10 {
-		logf(ctx(), "NOTED_UPSTASH_DB_PWD missing\n")
-		upstashDbPwd = ""
-	} else {
-		logf(ctx(), "Got NOTED_UPSTASH_DB_PWD")
+	getEnv := func(key string, val *string, minLen int) {
+		v := strings.TrimSpace(os.Getenv(key))
+		if len(v) < minLen {
+			logf(ctx(), "Missing %s\n", key)
+			return
+		}
+		*val = v
+		logf(ctx(), "Got %s\n", key)
 	}
 
-	r2Access = os.Getenv("NOTED_R2_ACCESS")
-	if len(r2Access) < 10 {
-		logf(ctx(), "NOTED_R2_ACCESS missing\n")
-		r2Access = ""
-	} else {
-		logf(ctx(), "Got NOTED_R2_ACCESS")
-	}
+	getEnv("NOTED_AXIOM_TOKEN", &axiomApiToken, 40)
+	getEnv("NOTED_PIRSCH_SECRET", &pirschClientSecret, 64)
+	getEnv("NOTED_GITHUB_SECRET", &secretGitHub, 40)
+	getEnv("NOTED_UPSTASH_URL", &upstashDbURL, 20)
+	getEnv("NOTED_R2_ACCESS", &r2Access, 10)
+	getEnv("NOTED_R2_SECRET", &r2Secret, 10)
 
-	r2Secret = os.Getenv("NOTED_R2_SECRET")
-	if len(r2Secret) < 10 {
-		logf(ctx(), "NOTED_R2_SECRET missing\n")
-		r2Secret = ""
-	} else {
-		logf(ctx(), "Got NOTED_R2_SECRET")
+	// validate the
+	if upstashDbURL != "" {
+		_, err := redis.ParseURL(upstashDbURL)
+		must(err)
 	}
 }
 
@@ -101,10 +67,11 @@ func main() {
 	}
 
 	getSecretsFromEnv()
-
 	setGitHubAuth()
-	if isDev() {
-		setGitHubAuthDev()
+
+	if true {
+		listR2Files()
+		testUpstash()
 	}
 
 	if flgWc {

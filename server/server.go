@@ -44,19 +44,12 @@ var (
 	}
 
 	// random string for oauth2 API calls to protect against CSRF
-	oauthSecretPrefix = "5576867039-"
+	oauthSecretPrefix = "34234234-"
 )
 
 func setGitHubAuth() {
 	oauthGitHubConf.ClientID = "389af84bdce4b478ad7b"
 	oauthGitHubConf.ClientSecret = secretGitHub
-}
-
-// we need different oauth callbacks for dev and production so we registered 2 apps:
-// https://github.com/settings/applications/1159176 : onlinetool.io Local
-func setGitHubAuthDev() {
-	oauthGitHubConf.ClientID = "77ba1cbe7c0eff7c462b"
-	oauthGitHubConf.ClientSecret = secretGitHubLocal
 }
 
 var (
@@ -171,7 +164,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		}
 
-		if strings.HasPreifx(uri, "/api/kv/") {
+		if strings.HasPrefix(uri, "/api/kv/") {
 			handleStore(w, r)
 			return
 		}
