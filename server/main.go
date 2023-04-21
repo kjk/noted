@@ -42,6 +42,36 @@ func getSecretsFromEnv() {
 	} else {
 		logf(ctx(), "Got GitHub local secret\n")
 	}
+	upstashDb = os.Getenv("NOTED_UPSTASH_DB")
+	if len(upstashDb) < 10 {
+		logf(ctx(), "NOTED_UPSTASH_DB missing\n")
+		upstashDb = ""
+	} else {
+		logf(ctx(), "Got NOTED_UPSTASH_DB")
+	}
+	upstashDbPwd = os.Getenv("NOTED_UPSTASH_DB_PWD")
+	if len(upstashDbPwd) < 10 {
+		logf(ctx(), "NOTED_UPSTASH_DB_PWD missing\n")
+		upstashDbPwd = ""
+	} else {
+		logf(ctx(), "Got NOTED_UPSTASH_DB_PWD")
+	}
+
+	r2Access = os.Getenv("NOTED_R2_ACCESS")
+	if len(r2Access) < 10 {
+		logf(ctx(), "NOTED_R2_ACCESS missing\n")
+		r2Access = ""
+	} else {
+		logf(ctx(), "Got NOTED_R2_ACCESS")
+	}
+
+	r2Secret = os.Getenv("NOTED_R2_SECRET")
+	if len(r2Secret) < 10 {
+		logf(ctx(), "NOTED_R2_SECRET missing\n")
+		r2Secret = ""
+	} else {
+		logf(ctx(), "Got NOTED_R2_SECRET")
+	}
 }
 
 var (

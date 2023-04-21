@@ -8,6 +8,12 @@ import (
 )
 
 var (
+	upstashDb    string
+	upstashDbPwd string
+
+	r2Access string
+	r2Secret string
+
 	inMemStoreNotes   = map[string]string{}
 	inMemStoreContent = map[string]string{}
 	muStore           sync.Mutex
