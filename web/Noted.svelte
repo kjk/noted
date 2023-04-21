@@ -179,10 +179,11 @@
       bind:this={titleEl}
       on:keydown={onTitleKeyDown}
       contenteditable="true"
+      placeholder="note title..."
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white"
+      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white"
     />
     <div
       use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
@@ -319,4 +320,12 @@
   .user-modify-plain {
     -webkit-user-modify: read-write-plaintext-only;
   }
+  .note-title[placeholder]:empty::before {
+    content: attr(placeholder);
+    color: #55555573;
+  }
+
+  /* .note-title[placeholder]:empty:focus::before {
+    content: "";
+  } */
 </style>

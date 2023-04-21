@@ -95,7 +95,7 @@ export class StoreLocal {
   }
 
   applyLog(log) {
-    console.log("applyLog", log);
+    // console.log("applyLog", log);
     let op = log[0];
     let createdAt = log[1];
     let updatedAt = createdAt;
@@ -107,24 +107,24 @@ export class StoreLocal {
       let note = new Note(id);
       let idx = len(this.notesFlattened);
       this.notesMap.set(id, idx);
-      console.log(
-        "added note",
-        id,
-        "at idx",
-        idx,
-        "title",
-        title,
-        "kind",
-        kind,
-        "isDaily",
-        isDaily,
-        "createdAt",
-        createdAt,
-        "updatedAt",
-        updatedAt,
-        "contentSha1",
-        ""
-      );
+      // console.log(
+      //   "added note",
+      //   id,
+      //   "at idx",
+      //   idx,
+      //   "title",
+      //   title,
+      //   "kind",
+      //   kind,
+      //   "isDaily",
+      //   isDaily,
+      //   "createdAt",
+      //   createdAt,
+      //   "updatedAt",
+      //   updatedAt,
+      //   "contentSha1",
+      //   ""
+      // );
       this.notesFlattened.push(
         id,
         title,
@@ -176,8 +176,11 @@ export class StoreLocal {
     }
     sortKeys(keys);
     for (let key of keys) {
-      let logs = await this.dbNotes.get(key);
-      for (let log of logs) {
+      // console.log("key:", key);
+      // @ts-ignore
+      this.currKey = key;
+      this.currLogs = await this.dbNotes.get(key);
+      for (let log of this.currLogs) {
         this.applyLog(log);
       }
     }
@@ -185,9 +188,9 @@ export class StoreLocal {
   }
 
   async appendLog(log) {
-    console.log("appendLog:", log, "size:", len(this.currLogs));
+    // console.log("appendLog:", log, "size:", len(this.currLogs));
     this.currLogs.push(log);
-    console.log("currLogs:", this.currLogs);
+    // console.log("currLogs:", this.currLogs);
     await this.dbNotes.set(this.currKey, this.currLogs);
     let nLogs = len(this.currLogs);
     if (nLogs >= kLogEntriesPerKey) {
@@ -203,7 +206,7 @@ export class StoreLocal {
     let log = mkLogCreateNote(title, type);
     await this.appendLog(log);
     let note = this.applyLog(log);
-    console.log("newNote:", note);
+    // console.log("newNote:", note);
     return note;
   }
 
