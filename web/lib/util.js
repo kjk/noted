@@ -694,10 +694,21 @@ export function noOp() {
   // function that does nothing
 }
 
-export async function sha1(str) {
-  const enc = new TextEncoder();
-  const hash = await crypto.subtle.digest("SHA-1", enc.encode(str));
-  return Array.from(new Uint8Array(hash))
-    .map((v) => v.toString(16).padStart(2, "0"))
-    .join("");
+// export async function sha1(str) {
+//   const enc = new TextEncoder();
+//   const hash = await crypto.subtle.digest("SHA-1", enc.encode(str));
+//   return Array.from(new Uint8Array(hash))
+//     .map((v) => v.toString(16).padStart(2, "0"))
+//     .join("");
+// }
+
+export function utf8ToBlob(str) {
+  let bytes = new TextEncoder().encode(str);
+  return new Blob([bytes]);
+}
+
+export async function blobToUtf8(blob) {
+  let ab = await blob.arrayBuffer();
+  let res = new TextDecoder().decode(ab);
+  return res;
 }

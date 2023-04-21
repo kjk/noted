@@ -1,5 +1,5 @@
 import { KV, createKVStoresDB } from "./lib/dbutil";
-import { genRandomID, len, throwIf } from "./lib/util";
+import { blobToUtf8, genRandomID, len, throwIf, utf8ToBlob } from "./lib/util";
 
 const kLogEntriesPerKey = 1024;
 
@@ -226,6 +226,144 @@ export class StoreLocal extends StoreCommon {
     let contentId = genRandomID(12);
     let log = mkLogChangeContent(id, contentId);
     await this.kvContent.set(contentId, content);
+    await this.appendLog(log);
+  }
+
+  getTitle(note) {
+    let id = note.valueOf();
+    let idx = this.notesMap.get(id);
+    return this.notesFlattened[idx + kNoteIdxTitle];
+  }
+
+  async setTitle(note, title) {
+    let id = note.valueOf();
+    let log = mkLogChangeTitle(id, title);
+    await this.appendLog(log);
+  }
+
+  async deleteNote(note) {
+    let id = note.valueOf();
+    let log = mkLogDeleteNote(id);
+    await this.appendLog(log);
+  }
+}
+
+const kContentStoreName = "content";
+const kNotesStoreName = "notes";
+export class StoreRemote extends StoreCommon {
+  currKey = "log:0";
+  currLogs = [];
+
+  constructor() {
+    super();
+  }
+
+  async storeKeys(storeName) {
+    let uri = "/api/kv/keys?storeName=" + storeName;
+    let resp = await fetch(uri);
+    let keys = await resp.json();
+    return keys;
+  }
+
+  async storeGetJSON(storeName, key) {
+    let uri = "/api/kv/getJSON?storeName=" + storeName + "&key=" + key;
+    let resp = await fetch(uri);
+    let value = await resp.json();
+    return value;
+  }
+
+  async storeGetBlob(storeName, key) {
+    let uri = "/api/kv/getBlob?storeName=" + storeName + "&key=" + key;
+    let resp = await fetch(uri);
+    let value = await resp.blob();
+    return value;
+  }
+
+  async storeSetJSON(storeName, key, value) {
+    let uri = "/api/kv/setJSON?storeName=" + storeName + "&key=" + key;
+    let resp = await fetch(uri, {
+      method: "POST",
+      body: JSON.stringify(value),
+    });
+    let ok = await resp.json();
+    return ok;
+  }
+
+  async storeSetBlob(storeName, key, value) {
+    let uri = "/api/kv/setBlob?storeName=" + storeName + "&key=" + key;
+    let resp = await fetch(uri, {
+      method: "POST",
+      body: value,
+    });
+    let ok = await resp.json();
+    return ok;
+  }
+
+  /**
+   * @returns {Promise<Note[]>}
+   */
+  async getNotes() {
+    if (len(this.notes) > 0) {
+      return this.notes;
+    }
+    let keys = await this.storeKeys(kNotesStoreName);
+    if (len(keys) == 0) {
+      return [];
+    }
+    sortKeys(keys);
+    for (let key of keys) {
+      // console.log("key:", key);
+      // @ts-ignore
+      this.currKey = key;
+      this.currLogs = await this.storeGetJSON(kNotesStoreName, key);
+      for (let log of this.currLogs) {
+        this.applyLog(log);
+      }
+    }
+    return this.notes;
+  }
+
+  async appendLog(log) {
+    // console.log("appendLog:", log, "size:", len(this.currLogs));
+    this.currLogs.push(log);
+    // console.log("currLogs:", this.currLogs);
+    await this.storeSetJSON(kNotesStoreName, this.currKey, this.currLogs);
+    let nLogs = len(this.currLogs);
+    if (nLogs >= kLogEntriesPerKey) {
+      let currId = parseInt(this.currKey.substring(4));
+      let nextId = currId + 1;
+      this.currKey = "log:" + nextId;
+      console.log("newKey:", this.currKey);
+      this.currLogs = [];
+    }
+  }
+
+  async newNote(title, type = "md") {
+    let log = mkLogCreateNote(title, type);
+    await this.appendLog(log);
+    let note = this.applyLog(log);
+    // console.log("newNote:", note);
+    return note;
+  }
+
+  async noteGetCurrentVersion(note) {
+    let id = note.valueOf();
+    let idx = this.notesMap.get(id);
+    let contentId = this.notesFlattened[idx + kNoteIdxLLatestVersionId];
+    if (!contentId) {
+      return null;
+    }
+    let blob = await this.storeGetBlob(kContentStoreName, contentId);
+    let s = await blobToUtf8(blob);
+    return s;
+  }
+
+  async noteAddVersion(note, content) {
+    let id = note.valueOf();
+    let contentId = genRandomID(12);
+    let log = mkLogChangeContent(id, contentId);
+    let blob = utf8ToBlob(content);
+    await this.storeSetBlob(kContentStoreName, contentId, blob);
     await this.appendLog(log);
   }
 
