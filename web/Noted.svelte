@@ -1,32 +1,31 @@
 <script>
   /** @typedef { import("@codemirror/state").Extension} Extension */
-  /** @typedef {import("./noteddb").Note2} Note2 */
+  /** @typedef {import("./notesStore").Note} Note */
 
   import { debounce, len } from "./lib/util";
   import { onMount } from "svelte";
   import {
-    Note,
     noteAddVersion,
     noteGetCurrentVersion,
     getNotes,
     newNote,
     noteGetTitle,
     noteSetTitle,
-  } from "./noteddb";
+  } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
 
   let notes = [];
 
   /** @type {HTMLElement} */
-  let editorElement = null;
+  let editorElement;
   /** @type {Editor} */
   let editor;
   let outputMsg = "";
   let statusMsg = "";
   let errorMsg = "";
 
-  /** @type {import("./noteddb").Note2} */
+  /** @type {Note} */
   let note;
 
   let title;
@@ -117,6 +116,7 @@
     if (ev.key === "Enter") {
       ev.stopPropagation();
       ev.preventDefault();
+      console.log("editor:", editor);
       editor.focus();
       return;
     }
@@ -129,18 +129,20 @@
   }
 
   /**
-   * @param {Note2} n
+   * @param {Note} n
    */
   function openNote(n) {
     note = n;
   }
 
   onMount(async () => {
+    console.log("onMount");
     notes = await getNotes();
     let nNotes = len(notes);
     console.log("notes:", nNotes);
 
     editor = new Editor(editorElement);
+    console.log("editor:", editor);
     editor.docChanged = debounce(handleDocChanged, 1000);
     document.addEventListener("keydown", onKeyDown);
 

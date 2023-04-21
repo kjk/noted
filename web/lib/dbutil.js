@@ -7,34 +7,49 @@ export class KV {
   storeName;
   dbPromise;
 
-  constructor(dbName, storeName) {
+  constructor(dbName, storeName, ver = 1) {
     this.dbName = dbName;
     this.storeName = storeName;
-    this.dbPromise = openDB(dbName, 1, {
+    // console.log("KV:", dbName, storeName);
+    this.dbPromise = openDB(dbName, ver, {
       upgrade(db) {
+        // console.log("upgrade");
         db.createObjectStore(storeName);
+        // console.log("upgrade: after createObjectStore");
       },
     });
   }
 
+  async getDb() {
+    let res = await this.dbPromise;
+    // console.log(res);
+    return res;
+  }
   async get(key) {
-    return (await this.dbPromise).get(this.storeName, key);
+    let db = await this.getDb();
+    return db.get(this.storeName, key);
   }
   async set(key, val) {
-    return (await this.dbPromise).put(this.storeName, val, key);
+    let db = await this.getDb();
+    return db.put(this.storeName, val, key);
   }
+
   // rejects if already exists
   async add(key, val) {
-    return (await this.dbPromise).add(this.storeName, val, key);
+    let db = await this.getDb();
+    return db.add(this.storeName, val, key);
   }
   async del(key) {
-    return (await this.dbPromise).delete(this.storeName, key);
+    let db = await this.getDb();
+    return db.delete(this.storeName, key);
   }
   async clear() {
-    return (await this.dbPromise).clear(this.storeName);
+    let db = await this.getDb();
+    return db.clear(this.storeName);
   }
   async keys() {
-    return (await this.dbPromise).getAllKeys(this.storeName);
+    let db = await this.getDb();
+    return db.getAllKeys(this.storeName);
   }
 }
 

@@ -1,4 +1,4 @@
-import { genRandomID, len } from "./lib/util";
+import { genRandomID, len, throwIf } from "./lib/util";
 
 import { KV } from "./lib/dbutil";
 
@@ -57,7 +57,10 @@ function mkLogDeleteNote(id) {
 }
 
 // derives from string, valueOf() is id
-class Note extends String {}
+export class Note extends String {}
+
+const dbContent = new KV("noted2", "content", 1);
+const dbNotes = new KV("noted3", "notes", 1);
 
 export class StoreLocal {
   // this is reconstructed from log entries
@@ -87,21 +90,41 @@ export class StoreLocal {
   currLogs = [];
 
   constructor() {
-    this.dbContent = new KV("noted", "content");
-    this.dbNotes = new KV("noted", "notes");
+    this.dbContent = dbContent;
+    this.dbNotes = dbNotes;
   }
 
   applyLog(log) {
+    console.log("applyLog", log);
     let op = log[0];
-    if (op == kLogCreateNote) {
-      let createdAt = log[1];
-      let id = log[2];
+    let createdAt = log[1];
+    let updatedAt = createdAt;
+    let id = log[2];
+    if (op === kLogCreateNote) {
       let title = log[3];
       let kind = log[4];
       let isDaily = log[5];
       let note = new Note(id);
       let idx = len(this.notesFlattened);
-      this.notesMap.set(note, idx);
+      this.notesMap.set(id, idx);
+      console.log(
+        "added note",
+        id,
+        "at idx",
+        idx,
+        "title",
+        title,
+        "kind",
+        kind,
+        "isDaily",
+        isDaily,
+        "createdAt",
+        createdAt,
+        "updatedAt",
+        updatedAt,
+        "contentSha1",
+        ""
+      );
       this.notesFlattened.push(
         id,
         title,
@@ -112,35 +135,31 @@ export class StoreLocal {
         0
       );
       this.notes.push(note);
-    } else if (op == kLogChangeTitle) {
-      let updatetAt = log[1];
-      let id = log[2];
+      return note;
+    }
+
+    throwIf(!this.notesMap.has(id), `note ${id} not found`);
+    let idx = this.notesMap.get(id);
+    if (op === kLogChangeTitle) {
       let title = log[3];
-      let idx = this.notesMap.get(id);
       this.notesFlattened[idx + kNoteIdxTitle] = title;
-      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatetAt;
-    } else if (op == kLogChangeContent) {
-      let updatetAt = log[1];
-      let id = log[2];
+      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
+    } else if (op === kLogChangeContent) {
       let contentSha1 = log[3];
-      let idx = this.notesMap.get(id);
       this.notesFlattened[idx + kNoteIdxLLatestVersionId] = contentSha1;
-      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatetAt;
-    } else if (op == kLogChangeKind) {
-      let updatetAt = log[1];
-      let id = log[2];
+      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
+    } else if (op === kLogChangeKind) {
       let kind = log[3];
-      let idx = this.notesMap.get(id);
       this.notesFlattened[idx + kNoteIdxKind] = kind;
-      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatetAt;
-    } else if (op == kLogDeleteNote) {
-      // let updatetAt = log[1];
-      let id = log[2];
+      this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
+    } else if (op === kLogDeleteNote) {
       // let idx = this.notesMap.get(id);
       // this.notesFlattened.splice(idx, 1);
       this.notesMap.delete(id);
       // TODO: make faster
       this.notes = this.notes.filter((n) => n.valueOf() != id);
+    } else {
+      throw new Error(`unknown log op ${op}`);
     }
   }
 
@@ -166,10 +185,16 @@ export class StoreLocal {
   }
 
   async appendLog(log) {
+    console.log("appendLog:", log, "size:", len(this.currLogs));
     this.currLogs.push(log);
-    await this.dbNotes.set(this.currKey, JSON.stringify(log));
-    if (len(this.currLogs) >= kLogEntriesPerKey) {
-      this.currKey = "log:" + (parseInt(this.currKey.substr(4)) + 1);
+    console.log("currLogs:", this.currLogs);
+    await this.dbNotes.set(this.currKey, this.currLogs);
+    let nLogs = len(this.currLogs);
+    if (nLogs >= kLogEntriesPerKey) {
+      let currId = parseInt(this.currKey.substring(4));
+      let nextId = currId + 1;
+      this.currKey = "log:" + nextId;
+      console.log("newKey:", this.currKey);
       this.currLogs = [];
     }
   }
@@ -177,6 +202,9 @@ export class StoreLocal {
   async newNote(title, type = "md") {
     let log = mkLogCreateNote(title, type);
     await this.appendLog(log);
+    let note = this.applyLog(log);
+    console.log("newNote:", note);
+    return note;
   }
 
   async noteGetCurrentVersion(note) {
@@ -197,7 +225,7 @@ export class StoreLocal {
     await this.appendLog(log);
   }
 
-  async getTitle(note) {
+  getTitle(note) {
     let id = note.valueOf();
     let idx = this.notesMap.get(id);
     return this.notesFlattened[idx + kNoteIdxTitle];
@@ -228,15 +256,15 @@ export const storeLocal = new StoreLocal();
 
 export const store = storeLocal;
 
-export function getNotes() {
+export async function getNotes() {
   return store.getNotes();
 }
 
-export function newNote(title, type = "md") {
+export async function newNote(title, type = "md") {
   return store.newNote(title, type);
 }
 
-export function noteAddVersion(note, content) {
+export async function noteAddVersion(note, content) {
   return store.noteAddVersion(note, content);
 }
 
@@ -250,4 +278,8 @@ export function noteSetTitle(note, title) {
 
 export function noteDelete(note) {
   return store.deleteNote(note);
+}
+
+export function noteGetCurrentVersion(note) {
+  return store.noteGetCurrentVersion(note);
 }
