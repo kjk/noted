@@ -5,11 +5,17 @@ import "./css/theme.css";
 import "./css/main.css";
 
 import App from "./Noted.svelte";
-import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
+import GithubLoginFailed from "./GithubLoginFailed.svelte";
 
 const args = {
   target: document.getElementById("app"),
 };
-export const app = new App(args);
 
-refreshGitHubTokenIfNeeded();
+export let app;
+
+if (window.location.pathname === "/github_login_failed") {
+  console.log("Github login failed");
+  app = new GithubLoginFailed(args);
+} else {
+  app = new App(args);
+}

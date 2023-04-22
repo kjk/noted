@@ -24,6 +24,7 @@
     setOnGitHubLogin,
   } from "./lib/github_login";
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
+  import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
 
   let notes = [];
 
@@ -187,6 +188,7 @@
   onMount(async () => {
     console.log("onMount");
     setOnGitHubLogin(doOnGitHubLogin);
+    refreshGitHubTokenIfNeeded();
 
     notes = await getNotes();
     let nNotes = len(notes);

@@ -24,6 +24,7 @@ func getSecretsFromEnv() {
 			return
 		}
 		*val = v
+		logf(ctx(), "Got %s, '%s'\n", key, v)
 		logf(ctx(), "Got %s\n", key)
 	}
 

@@ -79,7 +79,9 @@ func logLogin(ctx context.Context, r *http.Request, token *oauth2.Token) {
 }
 
 // /auth/githubcb
-// as set in https://github.com/settings/applications/1159140
+// as set in:
+// https://github.com/settings/applications/2175661
+// https://github.com/settings/applications/2175803
 func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -87,15 +89,18 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.FormValue("state")
 	if !strings.HasPrefix(state, oauthSecretPrefix) {
 		logErrorf(ctx, "invalid oauth state, expected '%s*', got '%s'\n", oauthSecretPrefix, state)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		uri := "/github_login_failed?err=" + url.QueryEscape("invalid oauth state")
+		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
 		return
 	}
 
 	code := r.FormValue("code")
 	token, err := oauthGitHubConf.Exchange(context.Background(), code)
 	if err != nil {
-		logErrorf(ctx, "oauthGoogleConf.Exchange() failed with '%s'\n", err)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		// logErrorf(ctx, "oauthGoogleConf.Exchange() failed with '%s',\n", err)
+		logErrorf(ctx, "oauthGoogleConf.Exchange() failed with '%s, clientID: '%s', secret: '%s',\n", err, oauthGitHubConf.ClientID, oauthGitHubConf.ClientSecret)
+		uri := "/github_login_failed?err=" + url.QueryEscape(err.Error())
+		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
 		return
 	}
 	logf(ctx, "token: %#v", token)
@@ -194,7 +199,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 
 		if proxyHandler != nil {
 			transformRequestForProxy := func() {
-				uris := []string{"/github_success", "/gisteditor/nogist", "/gisteditor/edit"}
+				uris := []string{"/github_success"}
 				shouldProxyURI := slices.Contains(uris, uri)
 				if !shouldProxyURI {
 					return
