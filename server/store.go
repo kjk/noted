@@ -205,8 +205,9 @@ func contentGet(id string) (io.ReadCloser, error) {
 
 func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
-	// TODO: maybe will need to paginate
-	if uri == "/api/store/getLog" {
+	logf(ctx(), "handleStore: %s\n", uri)
+	if uri == "/api/store/getLogs" {
+		// TODO: maybe will need to paginate
 		logs, err := storeGetLog()
 		if serveIfError(w, err) {
 			return
@@ -235,14 +236,14 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if serveIfError(w, err) {
 			return
 		}
-		err := storeAppendLog(logEntry)
+		err = storeAppendLog(logEntry)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{
 				"ok": true,
 			}
 			serveJSONOK(w, r, res)
 		}
-	} else if uri == "/api/kv/setContent" {
+	} else if uri == "/api/store/setContent" {
 		defer r.Body.Close()
 		if !checkMethodPOSTorPUT(w, r) {
 			return

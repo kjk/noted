@@ -2,7 +2,7 @@
   /** @typedef { import("@codemirror/state").Extension} Extension */
   /** @typedef {import("./notesStore").Note} Note */
 
-  import { debounce, len } from "./lib/util";
+  import { debounce, len, pluralize } from "./lib/util";
   import { onMount } from "svelte";
   import {
     noteAddVersion,
@@ -14,6 +14,7 @@
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
+  import GitHub from "./icons/GitHub.svelte";
 
   let notes = [];
 
@@ -128,6 +129,10 @@
     titleEl.focus();
   }
 
+  async function loginGitHub() {
+    console.log("loginGitHub");
+  }
+
   /**
    * @param {Note} n
    */
@@ -171,7 +176,7 @@
 
 <div id="sb-root" class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
   <div
-    class="mx-[22px] flex items-baseline max-w-[var(--editor-width)] px-[20px]"
+    class="mx-[22px] flex items-center max-w-[var(--editor-width)] px-[20px]"
   >
     <div
       tabindex="0"
@@ -187,15 +192,23 @@
     />
     <div
       use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
-      class="cursor-pointer"
+      class="cursor-pointer text-sm"
     >
-      {len(notes)} notes
+      {len(notes)}
+      {pluralize("note", len(notes))}
     </div>
     <button
       use:gtooltip={"<b>Ctrl + Shift + N</b>"}
       on:click={createNewNote}
-      class="relative text-sm border ml-4 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
+      class="relative text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
       >new note</button
+    >
+    <button
+      use:gtooltip={"LogIn with GitHub"}
+      on:click={loginGitHub}
+      class="relative flex items-center text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
+      ><GitHub class="mt-[1px]" />
+      <div class="ml-1.5">login</div></button
     >
   </div>
 

@@ -1,6 +1,11 @@
+<script>
+  let clazz = "";
+  export { clazz as class };
+</script>
+
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  class="icon icon-tabler icon-tabler-brand-github"
+  class="{clazz} icon icon-tabler icon-tabler-brand-github"
   width="1em"
   height="1em"
   viewBox="0 0 24 24"

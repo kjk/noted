@@ -712,3 +712,15 @@ export async function blobToUtf8(blob) {
   let res = new TextDecoder().decode(ab);
   return res;
 }
+
+/**
+ * @param {string} s
+ * @param {number} n
+ * @returns string
+ */
+export function pluralize(s, n) {
+  if (n === 1) {
+    return s;
+  }
+  return s + "s";
+}
