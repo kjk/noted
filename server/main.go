@@ -38,6 +38,10 @@ func getSecretsFromEnv() {
 		_, err := redis.ParseURL(upstashDbURL)
 		must(err)
 	}
+	if isDev() {
+		upstashPrefix = "dev:"
+		r2KeyPrefix = "dev/"
+	}
 }
 
 var (
