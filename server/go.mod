@@ -1,4 +1,4 @@
-module github.com/kjk/codeeval
+module github.com/kjk/noted
 
 go 1.18
 

@@ -39,7 +39,7 @@ var (
 		ClientID:     "",
 		ClientSecret: "",
 		// select level of access you want https://developer.github.com/v3/oauth/#scopes
-		Scopes:   []string{"user:email", "read:user", "gist"},
+		Scopes:   []string{"user:email", "read:user"},
 		Endpoint: githubEndpoint,
 	}
 
@@ -48,8 +48,19 @@ var (
 )
 
 func setGitHubAuth() {
-	oauthGitHubConf.ClientID = "389af84bdce4b478ad7b"
+	logf(ctx(), "setGitHubAuth()\n")
+	oauthGitHubConf.ClientID = "8ded4c0d72d9c14a388e"
 	oauthGitHubConf.ClientSecret = secretGitHub
+	// if isDev() {
+	// 	oauthGitHubConf.RedirectURL = fmt.Sprintf("http://localhost%d/auth/githubcb", httpPort)
+	// 	logf(ctx(), "setGitHubAuth: dev mode, oauthGitHubConf.RedirectURL: '%s'\n", oauthGitHubConf.RedirectURL)
+	// }
+}
+
+func setGitHubLocalAuth() {
+	logf(ctx(), "setGitHubLocalAuth()\n")
+	oauthGitHubConf.ClientID = "8adf394a86b4daa3fef8"
+	oauthGitHubConf.ClientSecret = "203dd5bd114d829bfd95beef4fb88c3214a42c3d"
 }
 
 var (
@@ -164,7 +175,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		}
 
-		if strings.HasPrefix(uri, "/api/kv/") {
+		if strings.HasPrefix(uri, "/api/store/") {
 			handleStore(w, r)
 			return
 		}
@@ -255,7 +266,7 @@ func runServerDev() {
 
 	httpSrv := makeHTTPServer(proxyHandler)
 
-	//closeHTTPLog := OpenHTTPLog("codeeval")
+	//closeHTTPLog := OpenHTTPLog("noted")
 	//defer closeHTTPLog()
 
 	logf(ctx(), "runServerDev(): starting on '%s', dev: %v\n", httpSrv.Addr, isDev())

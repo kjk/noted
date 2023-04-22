@@ -8,11 +8,11 @@ import popup from "./popup.js";
 import { showError } from "./Messages.svelte";
 
 // localStorage key for github token
-export const keyGitHubToken = "codeeval:gh-token";
+export const keyGitHubToken = "noted:gh-token";
 // localStorage key for github user info
-const keyGithubUserInfo = "codeeval:gh-user-info";
+const keyGithubUserInfo = "noted:gh-user-info";
 // localStorage key for login redirect
-export const keyTempLoginRedirect = "codeeval:login-redirect";
+export const keyTempLoginRedirect = "noted:login-redirect";
 
 let onGitHubLogin; // function
 

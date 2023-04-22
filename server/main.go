@@ -41,6 +41,9 @@ func getSecretsFromEnv() {
 	if isDev() {
 		upstashPrefix = "dev:"
 		r2KeyPrefix = "dev/"
+		setGitHubLocalAuth()
+	} else {
+		setGitHubAuth()
 	}
 }
 
@@ -71,7 +74,6 @@ func main() {
 	}
 
 	getSecretsFromEnv()
-	setGitHubAuth()
 
 	if true {
 		listR2Files()

@@ -252,23 +252,6 @@ export function throwIf(cond, msg) {
   }
 }
 
-// TODO: doesn't belong here but in gisteditor
-const adText = "(made with https://codeeval.dev)";
-/**
- * @param {string} s
- * @returns {string}
- */
-export function removeDescriptionAd(s) {
-  if (!s) {
-    return "";
-  }
-  if (!s.includes(adText)) {
-    return s;
-  }
-  s = s.replace(adText, "");
-  return s.trim();
-}
-
 export function fnNoOp() {
   // just a no-op function
   // more efficient than doing () => {} many times

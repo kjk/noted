@@ -121,14 +121,15 @@ func storeGetLogKeys() ([]string, error) {
 
 // TODO: prevent concurrent access to the same log key
 func storeAppendLog(v []interface{}) error {
+	logf(ctx(), "storeAppendLog()\n")
 	keys, err := storeGetLogKeys()
 	if err != nil {
 		return err
 	}
+	c := getUpstashClient()
 	key := "log-0"
 	if len(keys) > 0 {
-		key := keys[len(keys)-1]
-		c := getUpstashClient()
+		key = keys[len(keys)-1]
 		res := c.LLen(key)
 		if res.Err() != nil {
 			return res.Err()
@@ -145,11 +146,17 @@ func storeAppendLog(v []interface{}) error {
 	if err != nil {
 		return err
 	}
+	logf(ctx(), " key: %s, v:'%s'\n", key, string(jsonStr))
 	res := c.LPush(key, jsonStr)
 	return res.Err()
 }
 
-func storeGetLog() ([][]interface{}, error) {
+func storeGetLogs() ([][]interface{}, error) {
+	logf(ctx(), "storeGetLogs()\n")
+	timeStart := time.Now()
+	defer func() {
+		logf(ctx(), "  took %s\n", time.Since(timeStart))
+	}()
 	keys, err := storeGetLogKeys()
 	if err != nil {
 		return nil, err
@@ -188,8 +195,13 @@ func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func contentPut(r io.Reader) (string, error) {
-	mc := getR2Client()
 	id := genRandomID(12)
+	logf(ctx(), "contentPut() id: %s\n", id)
+	timeStart := time.Now()
+	defer func() {
+		logf(ctx(), "  took %s\n", time.Since(timeStart))
+	}()
+	mc := getR2Client()
 	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, id)
 	opts := minio.PutObjectOptions{}
 	_, err := mc.Client.PutObject(ctx(), r2Bucket, key, r, -1, opts)
@@ -197,6 +209,11 @@ func contentPut(r io.Reader) (string, error) {
 }
 
 func contentGet(id string) (io.ReadCloser, error) {
+	logf(ctx(), "contentGet(): id: %s\n", id)
+	timeStart := time.Now()
+	defer func() {
+		logf(ctx(), "  took %s\n", time.Since(timeStart))
+	}()
 	mc := getR2Client()
 	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, id)
 	obj, err := mc.Client.GetObject(ctx(), r2Bucket, key, minio.GetObjectOptions{})
@@ -206,26 +223,18 @@ func contentGet(id string) (io.ReadCloser, error) {
 func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
 	logf(ctx(), "handleStore: %s\n", uri)
+
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
-		logs, err := storeGetLog()
+		logs, err := storeGetLogs()
 		if serveIfError(w, err) {
 			return
 		}
 		serveJSONOK(w, r, logs)
-	} else if uri == "/api/store/getContent" {
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			http.Error(w, "id is required", http.StatusBadRequest)
-			return
-		}
-		obj, err := contentGet(id)
-		if serveIfError(w, err) {
-			return
-		}
-		defer obj.Close()
-		io.Copy(w, obj)
-	} else if uri == "/api/store/appendLog" {
+		return
+	}
+
+	if uri == "/api/store/appendLog" {
 		defer r.Body.Close()
 		if !checkMethodPOSTorPUT(w, r) {
 			return
@@ -243,7 +252,25 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 			}
 			serveJSONOK(w, r, res)
 		}
-	} else if uri == "/api/store/setContent" {
+		return
+	}
+
+	if uri == "/api/store/getContent" {
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			http.Error(w, "id is required", http.StatusBadRequest)
+			return
+		}
+		obj, err := contentGet(id)
+		if serveIfError(w, err) {
+			return
+		}
+		defer obj.Close()
+		io.Copy(w, obj)
+		return
+	}
+
+	if uri == "/api/store/setContent" {
 		defer r.Body.Close()
 		if !checkMethodPOSTorPUT(w, r) {
 			return
@@ -255,9 +282,10 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 			}
 			serveJSONOK(w, r, res)
 		}
-	} else {
-		http.NotFound(w, r)
+		return
 	}
+
+	http.NotFound(w, r)
 }
 
 const shortIDSymbols = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -15,6 +15,11 @@
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
   import GitHub from "./icons/GitHub.svelte";
+  import {
+    githubUserInfo,
+    openLoginWindow,
+    setOnGitHubLogin,
+  } from "./lib/github_login";
 
   let notes = [];
 
@@ -131,6 +136,7 @@
 
   async function loginGitHub() {
     console.log("loginGitHub");
+    openLoginWindow();
   }
 
   /**
@@ -140,8 +146,15 @@
     note = n;
   }
 
+  function doOnGitHubLogin() {
+    console.log("doOnGitHubLogin");
+    // TODO: get notes
+  }
+
   onMount(async () => {
     console.log("onMount");
+    setOnGitHubLogin(doOnGitHubLogin);
+
     notes = await getNotes();
     let nNotes = len(notes);
     console.log("notes:", nNotes);
@@ -203,13 +216,21 @@
       class="relative text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
       >new note</button
     >
-    <button
-      use:gtooltip={"LogIn with GitHub"}
-      on:click={loginGitHub}
-      class="relative flex items-center text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
-      ><GitHub class="mt-[1px]" />
-      <div class="ml-1.5">login</div></button
-    >
+
+    {#if $githubUserInfo}
+      <div class="flex items-center gap-x-2">
+        <GitHub class="mt-[1px]" />
+        <div class="text-sm">{githubUserInfo.login}</div>
+      </div>
+    {:else}
+      <button
+        use:gtooltip={"LogIn with GitHub"}
+        on:click={loginGitHub}
+        class="relative flex items-center text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
+        ><GitHub class="mt-[1px]" />
+        <div class="ml-1.5">login</div></button
+      >
+    {/if}
   </div>
 
   <div id="sb-main" class="overflow-hidden mt-1">
