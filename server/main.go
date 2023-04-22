@@ -24,8 +24,8 @@ func getSecretsFromEnv() {
 			return
 		}
 		*val = v
-		logf(ctx(), "Got %s, '%s'\n", key, v)
-		// logf(ctx(), "Got %s\n", key)
+		// logf(ctx(), "Got %s, '%s'\n", key, v)
+		logf(ctx(), "Got %s\n", key)
 	}
 
 	getEnv("NOTED_AXIOM_TOKEN", &axiomApiToken, 40)
