@@ -16,7 +16,6 @@ import (
 	"github.com/felixge/httpsnoop"
 	hutil "github.com/kjk/common/httputil"
 
-	"github.com/google/go-github/github"
 	"github.com/kjk/common/server"
 	"github.com/kjk/common/u"
 	"golang.org/x/exp/slices"
@@ -51,10 +50,6 @@ func setGitHubAuth() {
 	logf(ctx(), "setGitHubAuth()\n")
 	oauthGitHubConf.ClientID = "8ded4c0d72d9c14a388e"
 	oauthGitHubConf.ClientSecret = secretGitHub
-	// if isDev() {
-	// 	oauthGitHubConf.RedirectURL = fmt.Sprintf("http://localhost%d/auth/githubcb", httpPort)
-	// 	logf(ctx(), "setGitHubAuth: dev mode, oauthGitHubConf.RedirectURL: '%s'\n", oauthGitHubConf.RedirectURL)
-	// }
 }
 
 func setGitHubLocalAuth() {
@@ -68,24 +63,18 @@ var (
 )
 
 func logLogin(ctx context.Context, r *http.Request, token *oauth2.Token) {
-	oauthClient := oauthGitHubConf.Client(ctx, token)
-	client := github.NewClient(oauthClient)
-	user, _, err := client.Users.Get(ctx, "")
+	ghToken := token.AccessToken
+	_, user, err := getGitHubUserInfo(ghToken)
 	if err != nil {
-		logf(ctx, "client.Users.Get() faled with '%s'\n", err)
+		logf(ctx, "getGitHubUserInfo(%s) faled with '%s'\n", ghToken, err)
 		return
 	}
-	logf(ctx, "logged in as GitHub user: %s\n", *user.Login)
+	logf(ctx, "logLogin: user: %#v\n", user)
+	logf(ctx, "logLogin: logged in as GitHub user: %s\n", user.Login)
 	m := map[string]string{}
-	if user.Login != nil {
-		m["user"] = *user.Login
-	}
-	if user.Email != nil {
-		m["email"] = *user.Email
-	}
-	if user.Name != nil {
-		m["name"] = *user.Name
-	}
+	m["user"] = user.Login
+	m["email"] = user.Email
+	m["name"] = user.Name
 	pirschSendEvent(r, "github_login", 0, m)
 }
 
@@ -130,6 +119,22 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
 }
 
+// /auth/ghlogout
+func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logf(ctx, "handleLogoutGitHub()\n")
+	ghToken := getGitHubTokenFromRequest(r)
+	if ghToken == "" {
+		logf(ctx, "handleLogoutGitHub: no token\n")
+		serveInternalError(w, r, "no GitHub token")
+		return
+	}
+	serveText(w, http.StatusOK, "ok")
+	muStore.Lock()
+	defer muStore.Unlock()
+	delete(ghTokenToUserInfo, ghToken)
+}
+
 func permRedirect(w http.ResponseWriter, r *http.Request, newURL string) {
 	http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
 }
@@ -164,6 +169,9 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		case "/auth/ghlogin":
 			handleLoginGitHub(w, r)
+			return
+		case "/auth/ghlogout":
+			handleLogoutGitHub(w, r)
 			return
 		case "/auth/githubcb":
 			handleGithubCallback(w, r)

@@ -11,6 +11,7 @@
     newNote,
     noteGetTitle,
     noteSetTitle,
+    changeToRemoteStore,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -152,9 +153,22 @@
     note = n;
   }
 
-  function doOnGitHubLogin() {
+  async function doOnGitHubLogin() {
     console.log("doOnGitHubLogin");
-    // TODO: get notes
+    changeToRemoteStore();
+    notes = await getNotes();
+    let nNotes = len(notes);
+    console.log("notes:", nNotes);
+    if (nNotes === 0) {
+      await createNewNote();
+      notes = await getNotes();
+    } else {
+      note = notes[nNotes - 1];
+      for (let n of notes) {
+        let title = noteGetTitle(n);
+        console.log(title);
+      }
+    }
   }
 
   onMount(async () => {
@@ -179,7 +193,7 @@
       note = notes[nNotes - 1];
       for (let n of notes) {
         let title = noteGetTitle(n);
-        console.log(n);
+        console.log(title);
       }
     }
 
@@ -207,7 +221,7 @@
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white"
+      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white placeholder:italic"
     />
     <div
       use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
@@ -391,7 +405,7 @@
   }
   .note-title[placeholder]:empty::before {
     content: attr(placeholder);
-    color: #55555573;
+    @apply text-gray-400 italic font-normal;
   }
 
   /* .note-title[placeholder]:empty:focus::before {

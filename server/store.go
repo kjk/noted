@@ -17,18 +17,15 @@ import (
 )
 
 type UserInfo struct {
-	email      string
+	GitHubUser
 	lastLogKey string // log-0, log-1 etc.
 }
 
 var (
-	// TODO: temporary, until we have a proper user system
-	userID = "kkowalczyk@gmail.com"
-
-	userEmailToInfo = map[string]*UserInfo{}
-	upstashDbURL    string
-	upstashPrefix   = "" // dev: if isDev
-	r2KeyPrefix     = "" // dev/ if isDev
+	ghTokenToUserInfo = map[string]*UserInfo{}
+	upstashDbURL      string
+	upstashPrefix     = "" // dev: if isDev
+	r2KeyPrefix       = "" // dev/ if isDev
 
 	r2Endpoint = "71694ef61795ecbe1bc331d217dbd7a7.r2.cloudflarestorage.com"
 	r2Bucket   = "files"
@@ -78,6 +75,7 @@ func listR2Files() {
 
 func serveIfError(w http.ResponseWriter, err error) bool {
 	if err != nil {
+		logf(ctx(), "serveIfError(): %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return true
 	}
@@ -105,7 +103,7 @@ func sortLogKeys(a []string) error {
 
 const kMaxLogEntriesPerKey = 1024
 
-func storeGetLogKeys() ([]string, error) {
+func storeGetLogKeys(userID string) ([]string, error) {
 	prefix := fmt.Sprintf("%s:%s:notes-log:log-*", upstashPrefix, userID)
 
 	c := getUpstashClient()
@@ -114,15 +112,15 @@ func storeGetLogKeys() ([]string, error) {
 		return nil, res.Err()
 	}
 	keys := res.Val()
-	logf(ctx(), "storeGetLog() => %d keys for pref	ix %s\n", len(keys), prefix)
+	logf(ctx(), "storeGetLog(): %d keys for prefix %s\n", len(keys), prefix)
 	err := sortLogKeys(keys)
 	return keys, err
 }
 
 // TODO: prevent concurrent access to the same log key
-func storeAppendLog(v []interface{}) error {
+func storeAppendLog(userID string, v []interface{}) error {
 	logf(ctx(), "storeAppendLog()\n")
-	keys, err := storeGetLogKeys()
+	keys, err := storeGetLogKeys(userID)
 	if err != nil {
 		return err
 	}
@@ -151,13 +149,13 @@ func storeAppendLog(v []interface{}) error {
 	return res.Err()
 }
 
-func storeGetLogs() ([][]interface{}, error) {
+func storeGetLogs(userID string) ([][]interface{}, error) {
 	logf(ctx(), "storeGetLogs()\n")
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	keys, err := storeGetLogKeys()
+	keys, err := storeGetLogKeys(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -189,12 +187,12 @@ func storeGetLogs() ([][]interface{}, error) {
 func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != "POST" && r.Method != "PUT" {
 		http.Error(w, "only POST and PUT supported", http.StatusBadRequest)
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
-func contentPut(r io.Reader) (string, error) {
+func contentPut(userID string, r io.Reader) (string, error) {
 	id := genRandomID(12)
 	logf(ctx(), "contentPut() id: %s\n", id)
 	timeStart := time.Now()
@@ -208,25 +206,56 @@ func contentPut(r io.Reader) (string, error) {
 	return id, err
 }
 
-func contentGet(id string) (io.ReadCloser, error) {
-	logf(ctx(), "contentGet(): id: %s\n", id)
+func contentGet(userID string, contentID string) (io.ReadCloser, error) {
+	logf(ctx(), "contentGet(): id: %s\n", contentID)
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
 	mc := getR2Client()
-	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, id)
+	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, contentID)
 	obj, err := mc.Client.GetObject(ctx(), r2Bucket, key, minio.GetObjectOptions{})
 	return obj, err
 }
 
+func getLoggedUser(r *http.Request) (*UserInfo, error) {
+	ghToken := getGitHubTokenFromRequest(r)
+	if ghToken == "" {
+		return nil, fmt.Errorf("user not logged in (no GitHub token)")
+	}
+	muStore.Lock()
+	defer muStore.Unlock()
+	userInfo, ok := ghTokenToUserInfo[ghToken]
+	if ok {
+		return userInfo, nil
+	}
+
+	muStore.Unlock()
+	_, ghUser, err := getGitHubUserInfo(ghToken)
+
+	muStore.Lock()
+	if err != nil {
+		return nil, err
+	}
+	userInfo = &UserInfo{
+		GitHubUser: *ghUser,
+	}
+	ghTokenToUserInfo[ghToken] = userInfo
+	return userInfo, nil
+}
+
 func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
-	logf(ctx(), "handleStore: %s\n", uri)
-
+	userInfo, err := getLoggedUser(r)
+	if serveIfError(w, err) {
+		logf(ctx(), "handleStore: %s, err: %s\n", uri, err)
+		return
+	}
+	userID := userInfo.Email
+	logf(ctx(), "handleStore: %s, userID: %s\n", uri, userID)
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
-		logs, err := storeGetLogs()
+		logs, err := storeGetLogs(userID)
 		if serveIfError(w, err) {
 			return
 		}
@@ -245,7 +274,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if serveIfError(w, err) {
 			return
 		}
-		err = storeAppendLog(logEntry)
+		err = storeAppendLog(userID, logEntry)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{
 				"ok": true,
@@ -261,7 +290,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "id is required", http.StatusBadRequest)
 			return
 		}
-		obj, err := contentGet(id)
+		obj, err := contentGet(userID, id)
 		if serveIfError(w, err) {
 			return
 		}
@@ -275,7 +304,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if !checkMethodPOSTorPUT(w, r) {
 			return
 		}
-		id, err := contentPut(r.Body)
+		id, err := contentPut(userID, r.Body)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{
 				"id": id,
@@ -293,10 +322,10 @@ const shortIDSymbols = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 var nShortSymbols = len(shortIDSymbols)
 
 func genRandomID(n int) string {
-	rand.Seed(time.Now().UnixNano())
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	res := ""
 	for i := 0; i < n; i++ {
-		idx := rand.Intn(nShortSymbols)
+		idx := rnd.Intn(nShortSymbols)
 		c := string(shortIDSymbols[idx])
 		res = res + c
 	}

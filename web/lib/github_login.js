@@ -3,6 +3,7 @@ import * as githubapi from "./githubapi.js";
 import { get, writable } from "svelte/store";
 import { getLocalStorageAsJSON, setLocalStorageFromJSON } from "./util.js";
 
+import { addToken } from "./githubapi.js";
 import { logEvent } from "./events.js";
 import popup from "./popup.js";
 import { showError } from "./Messages.svelte";
@@ -103,10 +104,17 @@ export function openLoginWindow() {
   popup(uri, "GitHub Login", 600, 400);
 }
 
+export function serverLogout() {
+  let uri = "/auth/ghlogout";
+  let opts = addToken({});
+  fetch(uri, opts);
+}
+
 export function logout() {
   // must log before clearing tokens to log user
   logEvent("logout");
 
+  serverLogout();
   localStorage.removeItem(keyGitHubToken);
   setGitHubToken(null);
   storeGithubUserInfo(null);

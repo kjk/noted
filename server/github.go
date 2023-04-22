@@ -1,12 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
+	"time"
 
 	"github.com/kjk/common/u"
 )
@@ -15,98 +15,58 @@ const (
 	githubServer = "https://api.github.com"
 )
 
-// Gist describes a gist
-// https://developer.github.com/v3/gists/#get-a-single-gist
-type Gist struct {
-	// comes from the API
-	URL         string               `json:"url"`
-	ForksURL    string               `json:"forks_url"`
-	CommitsURL  string               `json:"commits_url"`
-	ID          string               `json:"id"`
-	NodeID      string               `json:"node_id"`
-	GitPullURL  string               `json:"git_pull_url"`
-	GitPushURL  string               `json:"git_push_url"`
-	HTMLURL     string               `json:"html_url"`
-	Files       map[string]*GistFile `json:"files"`
-	Public      bool                 `json:"public"`
-	CreatedAt   string               `json:"created_at"`
-	UpdatedAt   string               `json:"updated_at"`
-	Description string               `json:"description"`
-	Comments    int64                `json:"comments"`
-	User        json.RawMessage      `json:"user"`
-	CommentsURL string               `json:"comments_url"`
-	Owner       *GitOwner            `json:"owner"`
-	Forks       json.RawMessage      `json:"forks"`
-	History     []*GistHistory       `json:"history"`
-	Truncated   bool                 `json:"truncated"`
-
-	// set by us
-	Raw string `json:"-"`
+// https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28
+type GitHubUser struct {
+	Login                   string    `json:"login"`
+	ID                      int       `json:"id"`
+	NodeID                  string    `json:"node_id"`
+	AvatarURL               string    `json:"avatar_url"`
+	GravatarID              string    `json:"gravatar_id"`
+	URL                     string    `json:"url"`
+	HTMLURL                 string    `json:"html_url"`
+	FollowersURL            string    `json:"followers_url"`
+	FollowingURL            string    `json:"following_url"`
+	GistsURL                string    `json:"gists_url"`
+	StarredURL              string    `json:"starred_url"`
+	SubscriptionsURL        string    `json:"subscriptions_url"`
+	OrganizationsURL        string    `json:"organizations_url"`
+	ReposURL                string    `json:"repos_url"`
+	EventsURL               string    `json:"events_url"`
+	ReceivedEventsURL       string    `json:"received_events_url"`
+	Type                    string    `json:"type"`
+	SiteAdmin               bool      `json:"site_admin"`
+	Name                    string    `json:"name"`
+	Company                 string    `json:"company"`
+	Blog                    string    `json:"blog"`
+	Location                string    `json:"location"`
+	Email                   string    `json:"email"`
+	Hireable                bool      `json:"hireable"`
+	Bio                     string    `json:"bio"`
+	TwitterUsername         string    `json:"twitter_username"`
+	PublicRepos             int       `json:"public_repos"`
+	PublicGists             int       `json:"public_gists"`
+	Followers               int       `json:"followers"`
+	Following               int       `json:"following"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
+	PrivateGists            int       `json:"private_gists"`
+	TotalPrivateRepos       int       `json:"total_private_repos"`
+	OwnedPrivateRepos       int       `json:"owned_private_repos"`
+	DiskUsage               int       `json:"disk_usage"`
+	Collaborators           int       `json:"collaborators"`
+	TwoFactorAuthentication bool      `json:"two_factor_authentication"`
+	Plan                    struct {
+		Name          string `json:"name"`
+		Space         int    `json:"space"`
+		PrivateRepos  int    `json:"private_repos"`
+		Collaborators int    `json:"collaborators"`
+	} `json:"plan"`
 }
 
-// GistFile represents a gist file
-type GistFile struct {
-	Filename  string `json:"filename"`
-	Type      string `json:"type"`
-	Language  string `json:"language"`
-	RawURL    string `json:"raw_url"`
-	Size      int64  `json:"size"`
-	Truncated bool   `json:"truncated"`
-	Content   string `json:"content"`
-}
-
-// GistHistory represents gist history
-type GistHistory struct {
-	User         GitOwner        `json:"user"`
-	Version      string          `json:"version"`
-	CommittedAt  string          `json:"committed_at"`
-	ChangeStatus GitChangeStatus `json:"change_status"`
-	URL          string          `json:"url"`
-}
-
-// GitChangeStatus represents gist change status
-type GitChangeStatus struct {
-	Total     int64 `json:"total"`
-	Additions int64 `json:"additions"`
-	Deletions int64 `json:"deletions"`
-}
-
-// GitOwner represents owner of the gist
-type GitOwner struct {
-	Login             string `json:"login"`
-	ID                int64  `json:"id"`
-	NodeID            string `json:"node_id"`
-	AvatarURL         string `json:"avatar_url"`
-	GravatarID        string `json:"gravatar_id"`
-	URL               string `json:"url"`
-	HTMLURL           string `json:"html_url"`
-	FollowersURL      string `json:"followers_url"`
-	FollowingURL      string `json:"following_url"`
-	GistsURL          string `json:"gists_url"`
-	StarredURL        string `json:"starred_url"`
-	SubscriptionsURL  string `json:"subscriptions_url"`
-	OrganizationsURL  string `json:"organizations_url"`
-	ReposURL          string `json:"repos_url"`
-	EventsURL         string `json:"events_url"`
-	ReceivedEventsURL string `json:"received_events_url"`
-	Type              string `json:"type"`
-	SiteAdmin         bool   `json:"site_admin"`
-}
-
-var (
-	didNotifyUsingToken bool
-)
-
-func getGithubToken() string {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return token
-	}
-	if !didNotifyUsingToken {
-		logf(context.Background(), "GITHUB_TOKEN set, using it for GitHub API requests\n")
-		didNotifyUsingToken = true
-	}
-	return ""
+func getGitHubTokenFromRequest(r *http.Request) string {
+	auth := r.Header.Get("Authorization")
+	token := strings.TrimPrefix(auth, "token ")
+	return token
 }
 
 // JSONRequest represents a JSON request
@@ -126,11 +86,11 @@ type JSONRequest struct {
 }
 
 // NewGitHubRequest creates new GitHub request
-func NewGitHubRequest(uri string, value interface{}) *JSONRequest {
+func NewGitHubRequest(uri string, ghToken string, value interface{}) *JSONRequest {
 	return &JSONRequest{
 		URIPath:   uri,
 		Server:    githubServer,
-		AuthToken: getGithubToken(),
+		AuthToken: ghToken,
 		Value:     value,
 	}
 }
@@ -174,11 +134,10 @@ func (r *JSONRequest) Get() error {
 	return r.Err
 }
 
-func gistDownload(gistID string, etag string) (*JSONRequest, *Gist, error) {
-	endpoint := "/gists/" + gistID
-	gist := &Gist{}
-	req := NewGitHubRequest(endpoint, gist)
+func getGitHubUserInfo(ghToken string) (*JSONRequest, *GitHubUser, error) {
+	endpoint := "/user"
+	result := &GitHubUser{}
+	req := NewGitHubRequest(endpoint, ghToken, result)
 	err := req.Get()
-	/* TODO: download truncated */
-	return req, gist, err
+	return req, result, err
 }

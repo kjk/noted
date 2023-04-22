@@ -132,6 +132,12 @@ func serveJSON(w http.ResponseWriter, r *http.Request, code int, v interface{}) 
 	_, _ = w.Write(d)
 }
 
+func serveText(w http.ResponseWriter, code int, s string) {
+	w.Header().Set("content-type", "text/plain")
+	w.WriteHeader(code)
+	_, _ = io.WriteString(w, s)
+}
+
 func printDir(dir string) {
 	ctx := context.Background()
 	fn := func(path string, info os.FileInfo, err error) error {

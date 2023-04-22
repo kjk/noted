@@ -1,6 +1,8 @@
 import { KV, createKVStoresDB } from "./lib/dbutil";
 import { blobToUtf8, genRandomID, len, throwIf, utf8ToBlob } from "./lib/util";
 
+import { addToken } from "./lib/githubapi";
+
 const kLogEntriesPerKey = 1024;
 
 /*
@@ -253,35 +255,40 @@ export class StoreRemote extends StoreCommon {
     super();
   }
 
-  async storeGetLogs(storeName) {
+  async storeGetLogs() {
     let uri = "/api/store/getLogs";
-    let resp = await fetch(uri);
+    let opts = addToken({});
+    let resp = await fetch(uri, opts);
     let logs = await resp.json();
     return logs;
   }
+
   async storeAppendLog(log) {
     let uri = "/api/store/appendLog";
-    let resp = await fetch(uri, {
+    let opts = addToken({
       method: "POST",
       body: JSON.stringify(log),
     });
+    let resp = await fetch(uri, opts);
     let ok = await resp.json();
     return ok;
   }
 
   async storeGetContent(id) {
     let uri = "/api/store/getContent&id=" + id;
-    let resp = await fetch(uri);
+    let opts = addToken({});
+    let resp = await fetch(uri, opts);
     let value = await resp.blob();
     return value;
   }
 
   async storeSetContent(value) {
     let uri = "/api/store/setContent";
-    let resp = await fetch(uri, {
+    let opts = addToken({
       method: "POST",
       body: value,
     });
+    let resp = await fetch(uri, opts);
     let js = await resp.json();
     return js.id;
   }
@@ -365,9 +372,16 @@ function sortKeys(keys) {
   });
 }
 
-export const storeLocal = new StoreLocal();
+/** @type {StoreLocal | StoreRemote} */
+export let store = new StoreLocal();
 
-export const store = storeLocal;
+export function changeToRemoteStore() {
+  store = new StoreRemote();
+}
+
+export function changeToLocalStore() {
+  store = new StoreLocal();
+}
 
 export async function getNotes() {
   return store.getNotes();
