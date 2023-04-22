@@ -60,7 +60,7 @@ func setGitHubAuth() {
 func setGitHubLocalAuth() {
 	logf(ctx(), "setGitHubLocalAuth()\n")
 	oauthGitHubConf.ClientID = "8adf394a86b4daa3fef8"
-	oauthGitHubConf.ClientSecret = "203dd5bd114d829bfd95beef4fb88c3214a42c3d"
+	oauthGitHubConf.ClientSecret = secretGitHub
 }
 
 var (

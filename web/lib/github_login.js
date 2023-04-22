@@ -82,9 +82,11 @@ async function handleStorageChanged(e) {
 }
 
 export async function setToken(token) {
+  console.log("setToken:", token);
   setGitHubToken(token);
   try {
     const um = await githubapi.getLoggedUserInfo();
+    console.log("github.getLoggedUserInfo() returned:", um);
     storeGithubUserInfo(um);
     if (onGitHubLogin) {
       onGitHubLogin();

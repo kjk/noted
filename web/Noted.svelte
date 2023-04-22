@@ -17,6 +17,7 @@
   import GitHub from "./icons/GitHub.svelte";
   import {
     githubUserInfo,
+    logout,
     openLoginWindow,
     setOnGitHubLogin,
   } from "./lib/github_login";
@@ -139,6 +140,11 @@
     openLoginWindow();
   }
 
+  function logoutGitHub() {
+    console.log("logoutGitHub");
+    logout();
+  }
+
   /**
    * @param {Note} n
    */
@@ -218,9 +224,38 @@
     >
 
     {#if $githubUserInfo}
-      <div class="flex items-center gap-x-2">
-        <GitHub class="mt-[1px]" />
-        <div class="text-sm">{githubUserInfo.login}</div>
+      <div
+        class="relative group flex items-center gap-x-2 hover:bg-gray-100 cursor-pointer px-2 ml-2 py-1"
+      >
+        <img
+          class="avatar"
+          src={$githubUserInfo.avatar_url}
+          width="20"
+          height="20"
+          alt="kjk"
+        />
+        <div class="text-sm">{$githubUserInfo.login}</div>
+        <div class="mt-1 text-gray-700">
+          <svg viewBox="0 0 32 32" style="width: 8px; height: 8px"
+            ><path
+              d="M31.296 7.68c-.256-.32-.704-.512-1.216-.512-.448 0-.896.192-1.216.512L16
+    20.736 3.2 7.68c-.256-.32-.704-.512-1.216-.512-.448
+    0-.896.192-1.216.448S.256 8.32.256 8.768c0 .512.192.96.512 1.28L14.72
+    24.32c.32.32.704.512 1.152.512.256 0
+    .512-.064.768-.192.128-.064.256-.128.384-.128l.128-.064
+    14.016-14.336c.768-.64.704-1.728.128-2.432z"
+            /></svg
+          >
+
+          <div
+            class="hidden absolute text-sm flex-col border shadow left-0 top-full py-2 z-20 group-hover:flex"
+          >
+            <button
+              on:click={logoutGitHub}
+              class="hover:bg-gray-100 py-0.5 px-4">Logout</button
+            >
+          </div>
+        </div>
       </div>
     {:else}
       <button
