@@ -214,6 +214,15 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			transformRequestForProxy()
 			proxyHandler.ServeHTTP(w, r)
 			return
+		} else {
+			// those are actually index.html to change r.URL
+			// to force that codepath
+			uris := []string{"/github_login_failed"}
+			if slices.Contains(uris, uri) {
+				var err error
+				r.URL, err = url.Parse("/")
+				must(err)
+			}
 		}
 
 		opts := hutil.ServeFileOptions{
