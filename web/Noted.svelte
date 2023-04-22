@@ -12,6 +12,7 @@
     noteGetTitle,
     noteSetTitle,
     changeToRemoteStore,
+    changeToLocalStore,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -22,6 +23,7 @@
     openLoginWindow,
     setOnGitHubLogin,
   } from "./lib/github_login";
+  import SvgArrowDown from "./svg/SvgArrowDown.svelte";
 
   let notes = [];
 
@@ -49,7 +51,11 @@
     if (!title || !note) {
       return;
     }
-    console.log("titleChanged:", title);
+    let prevTitle = noteGetTitle(note);
+    if (prevTitle === title) {
+      return;
+    }
+    console.log(`titleChanged: '${prevTitle}' => '${title}'`);
     noteSetTitle(note, title);
     notes = notes;
   }
@@ -141,9 +147,11 @@
     openLoginWindow();
   }
 
-  function logoutGitHub() {
+  async function logoutGitHub() {
     console.log("logoutGitHub");
     logout();
+    changeToLocalStore();
+    await setLastNote();
   }
 
   /**
@@ -153,9 +161,7 @@
     note = n;
   }
 
-  async function doOnGitHubLogin() {
-    console.log("doOnGitHubLogin");
-    changeToRemoteStore();
+  async function setLastNote() {
     notes = await getNotes();
     let nNotes = len(notes);
     console.log("notes:", nNotes);
@@ -169,6 +175,13 @@
         console.log(title);
       }
     }
+  }
+
+  async function doOnGitHubLogin() {
+    console.log("doOnGitHubLogin");
+    note = null;
+    changeToRemoteStore();
+    await setLastNote();
   }
 
   onMount(async () => {
@@ -186,16 +199,7 @@
 
     clearProcessingMessage();
 
-    if (nNotes === 0) {
-      await createNewNote();
-      notes = await getNotes();
-    } else {
-      note = notes[nNotes - 1];
-      for (let n of notes) {
-        let title = noteGetTitle(n);
-        console.log(title);
-      }
-    }
+    await setLastNote();
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
@@ -225,15 +229,16 @@
     />
     <div
       use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
-      class="cursor-pointer text-sm"
+      class="cursor-pointer text-sm flex items-center gap-x-2 hover:bg-gray-100 px-2 py-0.5"
     >
-      {len(notes)}
-      {pluralize("note", len(notes))}
+      <div>{len(notes)}</div>
+      <div>{pluralize("note", len(notes))}</div>
+      <SvgArrowDown class="w-2 h-2" />
     </div>
     <button
       use:gtooltip={"<b>Ctrl + Shift + N</b>"}
       on:click={createNewNote}
-      class="relative text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
+      class="relative text-sm border ml-2 border-gray-300 hover:bg-gray-100 rounded-md py-0.5 px-2"
       >new note</button
     >
 
@@ -250,23 +255,13 @@
         />
         <div class="text-sm">{$githubUserInfo.login}</div>
         <div class="mt-1 text-gray-700">
-          <svg viewBox="0 0 32 32" style="width: 8px; height: 8px"
-            ><path
-              d="M31.296 7.68c-.256-.32-.704-.512-1.216-.512-.448 0-.896.192-1.216.512L16
-    20.736 3.2 7.68c-.256-.32-.704-.512-1.216-.512-.448
-    0-.896.192-1.216.448S.256 8.32.256 8.768c0 .512.192.96.512 1.28L14.72
-    24.32c.32.32.704.512 1.152.512.256 0
-    .512-.064.768-.192.128-.064.256-.128.384-.128l.128-.064
-    14.016-14.336c.768-.64.704-1.728.128-2.432z"
-            /></svg
-          >
-
+          <SvgArrowDown class="w-2 h-2" />
           <div
             class="hidden absolute text-sm flex-col border shadow left-0 top-full py-2 z-20 group-hover:flex"
           >
             <button
               on:click={logoutGitHub}
-              class="hover:bg-gray-100 py-0.5 px-4">Logout</button
+              class="hover:bg-gray-100 py-0.5 px-4 min-w-[6rem]">Logout</button
             >
           </div>
         </div>

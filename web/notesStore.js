@@ -251,6 +251,8 @@ export class StoreLocal extends StoreCommon {
 }
 
 export class StoreRemote extends StoreCommon {
+  /** @type {Map<string, Blob>} */
+  content = new Map();
   constructor() {
     super();
   }
@@ -276,7 +278,7 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeGetContent(id) {
-    let uri = "/api/store/getContent&id=" + id;
+    let uri = "/api/store/getContent?id=" + id;
     let opts = addToken({});
     let resp = await fetch(uri, opts);
     let value = await resp.blob();
@@ -334,7 +336,13 @@ export class StoreRemote extends StoreCommon {
     if (!contentId) {
       return null;
     }
-    let blob = await this.storeGetContent(contentId);
+    let blob;
+    if (this.content.has(contentId)) {
+      blob = this.content.get(contentId);
+    } else {
+      blob = await this.storeGetContent(contentId);
+      this.content.set(contentId, blob);
+    }
     let s = await blobToUtf8(blob);
     return s;
   }
@@ -345,6 +353,7 @@ export class StoreRemote extends StoreCommon {
     let contentId = await this.storeSetContent(blob);
     let log = mkLogChangeContent(id, contentId);
     await this.appendLog(log);
+    this.content.set(contentId, blob);
   }
 
   getTitle(note) {
