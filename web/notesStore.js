@@ -75,13 +75,13 @@ class StoreCommon {
   notes = [];
 
   applyLog(log) {
-    // console.log("applyLog", log);
+    console.log("applyLog", log);
     let op = log[0];
     let createdAt = log[1];
     let updatedAt = createdAt;
     let id = log[2];
     if (op === kLogCreateNote) {
-      let title = log[3];
+      let title = log[3] || "";
       let kind = log[4];
       let isDaily = log[5];
       let note = new Note(id);
@@ -264,6 +264,7 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeAppendLog(log) {
+    console.log("storeAppendLog:", log);
     let uri = "/api/store/appendLog";
     let opts = addToken({
       method: "POST",
@@ -314,6 +315,7 @@ export class StoreRemote extends StoreCommon {
   async appendLog(log) {
     // console.log("appendLog:", log, "size:", len(this.currLogs));
     // console.log("currLogs:", this.currLogs);
+    // console.log("appendLog:", log);
     await this.storeAppendLog(log);
     return this.applyLog(log);
   }

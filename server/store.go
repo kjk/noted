@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +30,7 @@ var (
 	r2KeyPrefix       = "" // dev/ if isDev
 
 	r2Endpoint = "71694ef61795ecbe1bc331d217dbd7a7.r2.cloudflarestorage.com"
-	r2Bucket   = "files"
+	r2Bucket   = "noted"
 	r2Access   string
 	r2Secret   string
 
@@ -82,16 +84,24 @@ func serveIfError(w http.ResponseWriter, err error) bool {
 	return false
 }
 
+func getLogKeyNo(s string) (int, error) {
+	idx := strings.LastIndex(s, "-")
+	if idx == -1 {
+		return 0, fmt.Errorf("getLogKeyNo() failed to parse '%s'", s)
+	}
+	return strconv.Atoi(s[idx+1:])
+}
+
 // keys are of the form "log-1", "log-2", etc.
 // TODO: verify they sort as we expect
 func sortLogKeys(a []string) error {
 	var err error
 	sort.Slice(a, func(i, j int) bool {
-		n1, err1 := strconv.Atoi(a[i][4:])
+		n1, err1 := getLogKeyNo(a[i])
 		if err1 != nil {
 			err = err1
 		}
-		n2, err1 := strconv.Atoi(a[j][4:])
+		n2, err1 := getLogKeyNo(a[j])
 		if err1 != nil {
 			err = err1
 		}
@@ -103,17 +113,26 @@ func sortLogKeys(a []string) error {
 
 const kMaxLogEntriesPerKey = 1024
 
+func mkLogKey(userID string, n int) string {
+	return fmt.Sprintf("%s%s:notes-log:log-%d", upstashPrefix, userID, n)
+}
+
+func mkLogKeyPrefix(userID string) string {
+	return fmt.Sprintf("%s%s:notes-log:log-*", upstashPrefix, userID)
+}
+
 func storeGetLogKeys(userID string) ([]string, error) {
-	prefix := fmt.Sprintf("%s:%s:notes-log:log-*", upstashPrefix, userID)
+	prefix := mkLogKeyPrefix(userID)
 
 	c := getUpstashClient()
 	res := c.Keys(prefix)
 	if res.Err() != nil {
+		logf(ctx(), "storeGetLogKeys(): failed with '%s'\n", res.Err())
 		return nil, res.Err()
 	}
 	keys := res.Val()
-	logf(ctx(), "storeGetLog(): %d keys for prefix %s\n", len(keys), prefix)
 	err := sortLogKeys(keys)
+	logf(ctx(), "storeGetLog(): %d keys for prefix %s, keys: %v\n", len(keys), prefix, keys)
 	return keys, err
 }
 
@@ -122,10 +141,11 @@ func storeAppendLog(userID string, v []interface{}) error {
 	logf(ctx(), "storeAppendLog()\n")
 	keys, err := storeGetLogKeys(userID)
 	if err != nil {
+
 		return err
 	}
 	c := getUpstashClient()
-	key := "log-0"
+	key := mkLogKey(userID, 0)
 	if len(keys) > 0 {
 		key = keys[len(keys)-1]
 		res := c.LLen(key)
@@ -133,19 +153,20 @@ func storeAppendLog(userID string, v []interface{}) error {
 			return res.Err()
 		}
 		if res.Val() >= kMaxLogEntriesPerKey {
-			lastKeNo, err := strconv.Atoi(key[4:])
+			lastKeyNo, err := getLogKeyNo(key)
 			if err != nil {
 				return err
 			}
-			key = fmt.Sprintf("log-%d", lastKeNo+1)
+			key = mkLogKey(userID, lastKeyNo+1)
 		}
 	}
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
+		logf(ctx(), "storeAppendLog(): failed to marshal '%#v', err: %s\n", v, err)
 		return err
 	}
 	logf(ctx(), " key: %s, v:'%s'\n", key, string(jsonStr))
-	res := c.LPush(key, jsonStr)
+	res := c.RPush(key, jsonStr)
 	return res.Err()
 }
 
@@ -192,28 +213,37 @@ func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
+func mkContentKey(userID string, contentID string) string {
+	return fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, contentID)
+}
+
 func contentPut(userID string, r io.Reader) (string, error) {
-	id := genRandomID(12)
-	logf(ctx(), "contentPut() id: %s\n", id)
+	contentID := genRandomID(12)
+	key := mkContentKey(userID, contentID)
+	logf(ctx(), "contentPut() id: %s, key: %s\n", contentID, key)
+	// Note: tried to PustObject(r) but the way minio client does multi-part
+	// uploads is not compatible with r2
+	d, err := ioutil.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
 	mc := getR2Client()
-	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, id)
-	opts := minio.PutObjectOptions{}
-	_, err := mc.Client.PutObject(ctx(), r2Bucket, key, r, -1, opts)
-	return id, err
+	_, err = mc.UploadData(key, d, false)
+	return contentID, err
 }
 
 func contentGet(userID string, contentID string) (io.ReadCloser, error) {
-	logf(ctx(), "contentGet(): id: %s\n", contentID)
+	key := mkContentKey(userID, contentID)
+	logf(ctx(), "contentGet(): id: %s, key: %s\n", contentID, key)
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
 	mc := getR2Client()
-	key := fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, contentID)
 	obj, err := mc.Client.GetObject(ctx(), r2Bucket, key, minio.GetObjectOptions{})
 	return obj, err
 }

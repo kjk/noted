@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"io"
 	"net/http"
@@ -75,7 +76,14 @@ func main() {
 
 	getSecretsFromEnv()
 
-	if true {
+	if false {
+		v := []interface{}{"s", 5, "hala"}
+		d, _ := json.Marshal(v)
+		logf(ctx(), "v: %s\n", string(d))
+		return
+	}
+
+	if false {
 		listR2Files()
 		testUpstash()
 	}
