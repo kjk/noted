@@ -1,6 +1,12 @@
-import { nodeAtPos } from "$sb/lib/tree.js";
-import { editor, markdown, system } from "$sb/silverbullet-syscall/mod.js";
-import { events } from "$sb/plugos-syscall/mod.js";
+import {
+  editor,
+  markdown,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
+import { events } from "../../plug-api/plugos-syscall/mod.js";
+import { nodeAtPos } from "../../plug-api/lib/tree.js";
+
 export async function unfurlCommand() {
   const mdTree = await markdown.parseMarkdown(await editor.getText());
   const nakedUrlNode = nodeAtPos(mdTree, await editor.getCursor());

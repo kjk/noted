@@ -1,4 +1,5 @@
 import { syntaxTree } from "../deps.js";
+
 const straightQuoteContexts = [
   "CommentBlock",
   "FencedCode",
@@ -6,6 +7,7 @@ const straightQuoteContexts = [
   "FrontMatterCode",
   "DirectiveStart",
 ];
+
 function keyBindingForQuote(quote, left, right) {
   return {
     any: (target, event) => {

@@ -226,41 +226,6 @@
         "mac": "Cmd-Shift-k"
       }
     },
-    "bold": {
-      "path": "./text.ts:wrapSelection",
-      "command": {
-        "name": "Text: Bold",
-        "key": "Ctrl-b",
-        "mac": "Cmd-b",
-        "wrapper": "**"
-      }
-    },
-    "italic": {
-      "path": "./text.ts:wrapSelection",
-      "command": {
-        "name": "Text: Italic",
-        "key": "Ctrl-i",
-        "mac": "Cmd-i",
-        "wrapper": "_"
-      }
-    },
-    "strikethrough": {
-      "path": "./text.ts:wrapSelection",
-      "command": {
-        "name": "Text: Strikethrough",
-        "key": "Ctrl-Shift-s",
-        "mac": "Cmd-Shift-s",
-        "wrapper": "~~"
-      }
-    },
-    "marker": {
-      "path": "./text.ts:wrapSelection",
-      "command": {
-        "name": "Text: Marker",
-        "key": "Alt-m",
-        "wrapper": "=="
-      }
-    },
     "extractToPageCommand": {
       "path": "./refactor.ts:extractToPage",
       "command": {
@@ -319,15 +284,6 @@
         "mac": "Cmd-Alt-b"
       },
       "events": ["log:hide"]
-    },
-    "unfurlLink": {
-      "path": "./link.ts:unfurlCommand",
-      "command": {
-        "name": "Link: Unfurl",
-        "key": "Ctrl-Shift-u",
-        "mac": "Cmd-Shift-u",
-        "contexts": ["NakedURL"]
-      }
     },
     "unfurlExec": {
       "env": "server",

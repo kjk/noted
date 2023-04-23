@@ -69,7 +69,10 @@ import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { noteGetTitle } from "./notesStore.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
+import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
 import { throwIf } from "./lib/util.js";
+import { unfurlCommand } from "./plugs/core/link.js";
+import { wrapSelection } from "./plugs/core/text.js";
 
 // import { CodeWidgetHook } from "./hooks/code_widget.js";
 
@@ -137,6 +140,71 @@ function loadCoreMarkdownExtensions() {
     exts.push(ext);
   }
   return exts;
+}
+
+let commands = {
+  bold: {
+    path: wrapSelection,
+    command: {
+      name: "Text: Bold",
+      key: "Ctrl-b",
+      mac: "Cmd-b",
+      wrapper: "**",
+    },
+  },
+  italic: {
+    path: wrapSelection,
+    command: {
+      name: "Text: Italic",
+      key: "Ctrl-i",
+      mac: "Cmd-i",
+      wrapper: "_",
+    },
+  },
+  strikethrough: {
+    path: wrapSelection,
+    command: {
+      name: "Text: Strikethrough",
+      key: "Ctrl-Shift-s",
+      mac: "Cmd-Shift-s",
+      wrapper: "~~",
+    },
+  },
+  marker: {
+    path: wrapSelection,
+    command: {
+      name: "Text: Marker",
+      key: "Alt-m",
+      wrapper: "==",
+    },
+  },
+  unfurlLink: {
+    path: unfurlCommand,
+    command: {
+      name: "Link: Unfurl",
+      key: "Ctrl-Shift-u",
+      mac: "Cmd-Shift-u",
+      contexts: ["NakedURL"],
+    },
+  },
+};
+
+function buildEditorCommands(commands) {
+  let editorCommands = new Map();
+  for (const [name, functionDef] of Object.entries(commands)) {
+    throwIf(!functionDef.command, "missing command");
+    const cmd = functionDef.command;
+    const func = functionDef.path;
+    throwIf(!func, "missing path");
+    let def = {
+      command: cmd,
+      run: () => {
+        return func(cmd);
+      },
+    };
+    editorCommands.set(cmd.name, def);
+  }
+  return editorCommands;
 }
 
 let slashCommands = {
@@ -252,6 +320,7 @@ export class Editor {
   slashCommandHook;
   viewDispatch;
   currentNote;
+  editorCommands;
 
   /**
    * @param {import("@codemirror/state").Transaction} tr
@@ -278,6 +347,7 @@ export class Editor {
       console.log("viewDispatch:", args);
     };
     this.mdExtensions = loadCoreMarkdownExtensions();
+    this.editorCommands = buildEditorCommands(commands);
 
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
@@ -307,6 +377,39 @@ export class Editor {
    * @returns {EditorState}
    */
   createEditorState(text, readOnly) {
+    let editor = this;
+    const commandKeyBindings = [];
+    for (const def of this.editorCommands.values()) {
+      if (def.command.key) {
+        commandKeyBindings.push({
+          key: def.command.key,
+          mac: def.command.mac,
+          run: () => {
+            console.log("commandKeyBindings.run:", def);
+            if (def.command.contexts) {
+              const context = this.getContext();
+              if (!context || !def.command.contexts.includes(context)) {
+                return false;
+              }
+            }
+            Promise.resolve()
+              .then(def.run)
+              .catch((e) => {
+                console.error(e);
+                // this.flashNotification(
+                //   `Error running command: ${e.message}`,
+                //   "error"
+                // );
+              })
+              .then(() => {
+                editor.focus();
+              });
+            return true;
+          },
+        });
+      }
+    }
+
     let tabSize = 4;
 
     /** @type {Extension[]}*/
@@ -475,6 +578,16 @@ export class Editor {
         { selector: "TableHeader", class: "sb-line-tbl-header" },
         { selector: "FrontMatter", class: "sb-frontmatter" },
       ]),
+      keymap.of([
+        ...smartQuoteKeymap,
+        ...closeBracketsKeymap,
+        ...standardKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...completionKeymap,
+        indentWithTab,
+        ...commandKeyBindings,
+      ]),
       pasteLinkExtension,
       attachmentExtension(this),
       closeBrackets(),
@@ -608,5 +721,14 @@ export class Editor {
     if (win) {
       win.focus();
     }
+  }
+
+  getContext() {
+    const state = this.editorView.state;
+    const selection = state.selection.main;
+    if (selection.empty) {
+      return syntaxTree(state).resolveInner(selection.from).type.name;
+    }
+    return;
   }
 }

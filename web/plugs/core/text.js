@@ -1,4 +1,5 @@
-import { editor } from "$sb/silverbullet-syscall/mod.js";
+import { editor } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export async function quoteSelection() {
   let text = await editor.getText();
   const selection = await editor.getSelection();
@@ -16,6 +17,7 @@ export async function quoteSelection() {
   }
   await editor.replaceRange(from, selection.to, text);
 }
+
 export async function listifySelection() {
   let text = await editor.getText();
   const selection = await editor.getSelection();
@@ -35,6 +37,7 @@ export async function listifySelection() {
   text = `* ${text.replaceAll(/\n(?!\n)/g, "\n* ")}`;
   await editor.replaceRange(from, selection.to, text);
 }
+
 export async function numberListifySelection() {
   let text = await editor.getText();
   const selection = await editor.getSelection();
@@ -52,6 +55,7 @@ ${counter}. `;
   })}`;
   await editor.replaceRange(from, selection.to, text);
 }
+
 export async function linkSelection() {
   const text = await editor.getText();
   const selection = await editor.getSelection();
@@ -70,9 +74,11 @@ export async function linkSelection() {
   await editor.replaceRange(selection.from, selection.to, linkedText);
   await editor.moveCursor(selection.from + pos);
 }
+
 export function wrapSelection(cmdDef) {
   return insertMarker(cmdDef.wrapper);
 }
+
 async function insertMarker(marker) {
   const text = await editor.getText();
   const selection = await editor.getSelection();

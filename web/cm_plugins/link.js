@@ -4,6 +4,7 @@ import {
   invisibleDecoration,
   isCursorInRange,
 } from "./util.js";
+
 export function linkPlugin(editor) {
   return decoratorStateField((state) => {
     const widgets = [];
