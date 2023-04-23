@@ -63,6 +63,7 @@ export async function instantiateTemplateCommand() {
   await space.writePage(pageName, pageText);
   await editor.navigate(pageName);
 }
+
 export async function insertSnippet() {
   const allPages = await space.listPages();
   const { snippetPrefix } = await readSettings({
@@ -94,6 +95,7 @@ export async function insertSnippet() {
     await editor.moveCursor(cursorPos + carretPos);
   }
 }
+
 export function replaceTemplateVars(s, pageName) {
   return s.replaceAll(/\{\{([^\}]+)\}\}/g, (match, v) => {
     switch (v) {
@@ -125,6 +127,7 @@ export function replaceTemplateVars(s, pageName) {
     return match;
   });
 }
+
 export async function quickNoteCommand() {
   const { quickNotePrefix } = await readSettings({
     quickNotePrefix: "\u{1F4E5} ",
@@ -135,6 +138,7 @@ export async function quickNoteCommand() {
   const pageName = `${quickNotePrefix}${date} ${time}`;
   await editor.navigate(pageName);
 }
+
 export async function dailyNoteCommand() {
   const { dailyNoteTemplate, dailyNotePrefix } = await readSettings({
     dailyNoteTemplate: "template/page/Daily Note",
@@ -162,6 +166,7 @@ export async function dailyNoteCommand() {
     await editor.navigate(pageName);
   }
 }
+
 function getWeekStartDate(monday = false) {
   const d = new Date();
   const day = d.getDay();
@@ -171,6 +176,7 @@ function getWeekStartDate(monday = false) {
   }
   return new Date(d.setDate(diff));
 }
+
 export async function weeklyNoteCommand() {
   const { weeklyNoteTemplate, weeklyNotePrefix, weeklyNoteMonday } =
     await readSettings({
@@ -200,6 +206,7 @@ export async function weeklyNoteCommand() {
     await editor.navigate(pageName);
   }
 }
+
 export async function insertTemplateText(cmdDef) {
   const cursorPos = await editor.getCursor();
   const page = await editor.getCurrentPage();
@@ -212,6 +219,7 @@ export async function insertTemplateText(cmdDef) {
     await editor.moveCursor(cursorPos + carretPos);
   }
 }
+
 export async function applyLineReplace(cmdDef) {
   const cursorPos = await editor.getCursor();
   const text = await editor.getText();

@@ -3,7 +3,6 @@ import { Vim, vimGetCm } from "../deps.js";
 export function editorSyscalls(editor) {
   const syscalls = {
     "editor.getCurrentPage": () => {
-      throw new Error("editor.getCurrentPage is deprecated");
       return editor.currentPage;
     },
     "editor.getText": () => {
@@ -19,7 +18,6 @@ export function editorSyscalls(editor) {
       throw new Error("editor.save is deprecated");
       return editor.save(true);
     },
-
     "editor.navigate": async (
       _ctx,
       name,

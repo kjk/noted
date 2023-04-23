@@ -89,13 +89,6 @@
     editor.setText(s);
   }
 
-  function setErrorMessage(s) {
-    errorMsg = s;
-  }
-  function clearErrorMessage() {
-    setErrorMessage("");
-  }
-
   /**
    * @param {KeyboardEvent} ev
    */

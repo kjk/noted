@@ -161,72 +161,11 @@
     "applyLineReplace": {
       "path": "./template.ts:applyLineReplace"
     },
-    "insertFrontMatter": {
-      "redirect": "insertTemplateText",
-      "slashCommand": {
-        "name": "front-matter",
-        "description": "Insert page front matter",
-        "value": "---\n|^|\n---\n"
-      }
-    },
-    "makeH1": {
-      "redirect": "applyLineReplace",
-      "slashCommand": {
-        "name": "h1",
-        "description": "Turn line into h1 header",
-        "match": "^#*\\s*",
-        "replace": "# "
-      }
-    },
-    "makeH2": {
-      "redirect": "applyLineReplace",
-      "slashCommand": {
-        "name": "h2",
-        "description": "Turn line into h2 header",
-        "match": "^#*\\s*",
-        "replace": "## "
-      }
-    },
-    "makeH3": {
-      "redirect": "applyLineReplace",
-      "slashCommand": {
-        "name": "h3",
-        "description": "Turn line into h3 header",
-        "match": "^#*\\s*",
-        "replace": "### "
-      }
-    },
-    "makeH4": {
-      "redirect": "applyLineReplace",
-      "slashCommand": {
-        "name": "h4",
-        "description": "Turn line into h4 header",
-        "match": "^#*\\s*",
-        "replace": "#### "
-      }
-    },
     "newPage": {
       "path": "./page.ts:newPageCommand",
       "command": {
         "name": "Page: New",
         "key": "Alt-Shift-n"
-      }
-    },
-    "insertHRTemplate": {
-      "redirect": "insertTemplateText",
-      "slashCommand": {
-        "name": "hr",
-        "description": "Insert a horizontal rule",
-        "value": "---"
-      }
-    },
-    "insertTable": {
-      "redirect": "insertTemplateText",
-      "slashCommand": {
-        "name": "table",
-        "description": "Insert a table",
-        "boost": -1,
-        "value": "| Header A | Header B |\n|----------|----------|\n| Cell A|^| | Cell B |\n"
       }
     },
     "quickNoteCommand": {
@@ -255,32 +194,6 @@
       "path": "./template.ts:instantiateTemplateCommand",
       "command": {
         "name": "Template: Instantiate Page"
-      }
-    },
-    "insertSnippet": {
-      "path": "./template.ts:insertSnippet",
-      "command": {
-        "name": "Template: Insert Snippet"
-      },
-      "slashCommand": {
-        "name": "snippet",
-        "description": "Insert a snippet"
-      }
-    },
-    "insertTodayCommand": {
-      "path": "./template.ts:insertTemplateText",
-      "slashCommand": {
-        "name": "today",
-        "description": "Insert today's date",
-        "value": "{{today}}"
-      }
-    },
-    "insertTomorrowCommand": {
-      "path": "./template.ts:insertTemplateText",
-      "slashCommand": {
-        "name": "tomorrow",
-        "description": "Insert tomorrow's date",
-        "value": "{{tomorrow}}"
       }
     },
     "quoteSelectionCommand": {

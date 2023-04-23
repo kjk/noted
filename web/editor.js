@@ -47,13 +47,17 @@ import {
   yamlLanguage,
 } from "./deps.js";
 import {
+  applyLineReplace,
+  insertSnippet,
+  insertTemplateText,
+} from "./plugs/core/template.js";
+import {
   attachmentExtension,
   pasteLinkExtension,
 } from "./cm_plugins/editor_paste.js";
 
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Tag } from "./deps.js";
-import { applyLineReplace } from "./plugs/core/template.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
 import customMarkdownStyle from "./style.js";
@@ -63,6 +67,7 @@ import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
+import { noteGetTitle } from "./notesStore.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { throwIf } from "./lib/util.js";
 
@@ -134,6 +139,105 @@ function loadCoreMarkdownExtensions() {
   return exts;
 }
 
+let slashCommands = {
+  insertFrontMatter: {
+    redirect: insertTemplateText,
+    slashCommand: {
+      name: "front-matter",
+      description: "Insert page front matter",
+      value: "---\n|^|\n---\n",
+    },
+  },
+  makeH1: {
+    redirect: applyLineReplace,
+    slashCommand: {
+      name: "h1",
+      description: "Turn line into h1 header",
+      match: "^#*\\s*",
+      replace: "# ",
+    },
+  },
+  makeH2: {
+    redirect: applyLineReplace,
+    slashCommand: {
+      name: "h2",
+      description: "Turn line into h2 header",
+      match: "^#*\\s*",
+      replace: "## ",
+    },
+  },
+  makeH3: {
+    redirect: applyLineReplace,
+    slashCommand: {
+      name: "h3",
+      description: "Turn line into h3 header",
+      match: "^#*\\s*",
+      replace: "### ",
+    },
+  },
+  makeH4: {
+    redirect: applyLineReplace,
+    slashCommand: {
+      name: "h4",
+      description: "Turn line into h4 header",
+      match: "^#*\\s*",
+      replace: "#### ",
+    },
+  },
+  insertHRTemplate: {
+    redirect: insertTemplateText,
+    slashCommand: {
+      name: "hr",
+      description: "Insert a horizontal rule",
+      value: "---",
+    },
+  },
+  insertTable: {
+    redirect: insertTemplateText,
+    slashCommand: {
+      name: "table",
+      description: "Insert a table",
+      boost: -1,
+      value:
+        "| Header A | Header B |\n|----------|----------|\n| Cell A|^| | Cell B |\n",
+    },
+  },
+  insertSnippet: {
+    path: insertSnippet,
+    command: {
+      name: "Template: Insert Snippet",
+    },
+    slashCommand: {
+      name: "snippet",
+      description: "Insert a snippet",
+    },
+  },
+  insertTodayCommand: {
+    path: insertTemplateText,
+    slashCommand: {
+      name: "today",
+      description: "Insert today's date",
+      value: "{{today}}",
+    },
+  },
+  insertTomorrowCommand: {
+    path: insertTemplateText,
+    slashCommand: {
+      name: "tomorrow",
+      description: "Insert tomorrow's date",
+      value: "{{tomorrow}}",
+    },
+  },
+};
+
+function addSlashHooks(slashCommandHook) {
+  for (let [name, def] of Object.entries(slashCommands)) {
+    let cmd = def.slashCommand;
+    let func = def.redirect || def.path;
+    slashCommandHook.add(name, cmd, func);
+  }
+}
+
 export class Editor {
   /** @type {HTMLElement} */
   editorElement;
@@ -144,10 +248,10 @@ export class Editor {
   mdExtensions = [];
   /** @type {Space}  */
   space;
-  currentPage = ""; // TODO: get rid of it
   codeWidgetHook;
   slashCommandHook;
   viewDispatch;
+  currentNote;
 
   /**
    * @param {import("@codemirror/state").Transaction} tr
@@ -169,20 +273,11 @@ export class Editor {
       return embedWidget(bodyText);
     });
     this.slashCommandHook = new SlashCommandHook(this);
+    addSlashHooks(this.slashCommandHook);
     this.viewDispatch = (args) => {
       console.log("viewDispatch:", args);
     };
     this.mdExtensions = loadCoreMarkdownExtensions();
-    this.slashCommandHook.add(
-      "makeH3",
-      {
-        name: "h3",
-        description: "Turn line into h3 header",
-        match: "^#*\\s*",
-        replace: "### ",
-      },
-      applyLineReplace
-    );
 
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
@@ -195,6 +290,15 @@ export class Editor {
     // TODO: long term we want to undo this redirection
     let syscall = editorSyscalls(this);
     setEdiotrSyscall(syscall);
+  }
+
+  get currentPage() {
+    let title = "";
+    if (this.currentNote) {
+      title = noteGetTitle(this.currentNote);
+    }
+    console.log(`Editor.currentPage: '${title}'`);
+    return title;
   }
 
   /**
