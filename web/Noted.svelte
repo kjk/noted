@@ -331,16 +331,6 @@
       Noto Color Emoji;
   }
 
-  .output {
-    max-height: 80vh;
-    min-height: 12em;
-    width: 50%;
-    right: 1em;
-    bottom: 1em;
-    /* border-color: blue; */
-    /* border-width: 1px; */
-  }
-
   .flash-msg {
     top: 52px;
     right: 8px;
