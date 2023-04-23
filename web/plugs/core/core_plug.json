@@ -1,23 +1,6 @@
 {
   "name": "core",
   "imports": ["https://get.silverbullet.md/global.plug.json"],
-  "syntax": {
-    "Hashtag": {
-      "firstCharacters": ["#"],
-      "regex": "#[^#\\d\\s\\[\\]]+\\w+",
-      "className": "sb-hashtag"
-    },
-    "NakedURL": {
-      "firstCharacters": ["h"],
-      "regex": "https?:\\/\\/[-a-zA-Z0-9@:%._\\+~#=]{1,256}([-a-zA-Z0-9()@:%_\\+.~#?&=\\/]*)",
-      "className": "sb-naked-url"
-    },
-    "NamedAnchor": {
-      "firstCharacters": ["$"],
-      "regex": "\\$[a-zA-Z\\.\\-\\/]+[\\w\\.\\-\\/]*",
-      "className": "sb-named-anchor"
-    }
-  },
   "functions": {
     "setEditorMode": {
       "path": "./editor.ts:setEditorMode",
