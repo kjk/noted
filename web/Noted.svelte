@@ -127,7 +127,8 @@
 
   async function createNewNote() {
     console.log("createNewNote");
-    note = await newNote("");
+    let n = await newNote("");
+    openNote(n);
     titleEl.focus();
   }
 
@@ -148,6 +149,7 @@
    */
   function openNote(n) {
     note = n;
+    editor.currentNote = n;
   }
 
   async function setLastNote() {
@@ -158,7 +160,8 @@
       await createNewNote();
       notes = await getNotes();
     } else {
-      note = notes[nNotes - 1];
+      let currNote = notes[nNotes - 1];
+      openNote(currNote);
       for (let n of notes) {
         let title = noteGetTitle(n);
         console.log(title);
@@ -168,7 +171,7 @@
 
   async function doOnGitHubLogin() {
     console.log("doOnGitHubLogin");
-    note = null;
+    openNote(null);
     changeToRemoteStore();
     await setLastNote();
   }
