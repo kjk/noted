@@ -7,11 +7,15 @@
   import { focus } from "./actions/focus";
 
   export let open = false;
+  /** @type {string[]}*/
   export let items = [];
   export let allowCreateOnEnter = false;
   export let onSelected = (idx, item) => {};
 
-  let filteredItems = items;
+  /** @type {string[]}*/
+  let itemsLowerCase = [];
+  /** @type {number[]}*/
+  let filteredItems = [];
   let searchTerm = "";
   let selectedIdx = 0;
   let ignoreNextMouseEnter = false;
@@ -19,34 +23,46 @@
   /** @type {HTMLElement} */
   let inputEl;
 
-  function getMatchingItems(s) {
-    if (s === "") {
-      return items;
-    }
-    s = s.toLowerCase();
-    const a = [];
-    for (let lng of items) {
-      const lng2 = lng.toLowerCase();
-      if (lng2.includes(s)) {
-        a.push(lng);
-      }
-    }
-    return a;
-  }
+  $: filterItems(searchTerm);
 
+  function getMatchingItems(s) {}
+
+  /**
+   * @param {string} searchTerm
+   */
   function filterItems(searchTerm) {
     // current selection is invalidated after changing the list
     // in that case reset selection to first item
-    // TODO: could be smarter about which item to select (i.e. if
-    // previously selected is in the new list, preserve it)
-    const nPrev = len(filteredItems);
-    filteredItems = getMatchingItems(searchTerm);
-    if (nPrev !== len(filteredItems)) {
-      selectedIdx = 0;
+    let selectedItem = -1;
+    let a = filteredItems;
+    if (selectedIdx >= 0 && selectedIdx < len(a)) {
+      selectedItem = a[selectedIdx];
     }
-  }
+    let s = searchTerm.trim();
+    if (s === "") {
+      resetFilteredItems();
+      if (selectedItem !== -1) {
+        selectedIdx = selectedItem;
+      }
+      return;
+    }
 
-  $: filterItems(searchTerm);
+    s = s.toLowerCase();
+    let idx = 0;
+    for (let i = 0; i < len(items); i++) {
+      const item = itemsLowerCase[i];
+      if (!item.includes(s)) {
+        continue;
+      }
+      a[idx] = i;
+      if (i === selectedItem) {
+        selectedIdx = idx;
+      }
+      idx++;
+    }
+    a.length = idx;
+    filteredItems = a;
+  }
 
   /**
    * @param {KeyboardEvent} ev
@@ -54,9 +70,9 @@
   function handleKeyDown(ev) {
     // console.log("handleKeyDown", ev.code);
     if (ev.code === "Enter") {
-      const item = filteredItems[selectedIdx];
-      if (typeof item === "string") {
-        selectItem(item);
+      const itemIdx = filteredItems[selectedIdx];
+      if (typeof itemIdx === "number" && itemIdx >= 0 && itemIdx < len(items)) {
+        selectItem(itemIdx);
         return;
       }
       if (allowCreateOnEnter && searchTerm !== "") {
@@ -93,16 +109,34 @@
     selectedIdx = idx;
   }
 
+  function resetFilteredItems() {
+    let nItems = len(items);
+    filteredItems.length = nItems;
+    for (let i = 0; i < nItems; i++) {
+      filteredItems[i] = i;
+    }
+  }
+
   onMount(() => {
+    let nItems = len(items);
+    itemsLowerCase = Array(nItems);
+    for (let i = 0; i < nItems; i++) {
+      itemsLowerCase[i] = items[i].toLowerCase();
+    }
+    filteredItems = Array(nItems);
+    resetFilteredItems();
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   });
 
-  function selectItem(item) {
-    let idx = items.indexOf(item);
-    onSelected(idx, item);
+  /**
+   * @param {number} itemIdx
+   */
+  function selectItem(itemIdx) {
+    let item = items[itemIdx];
+    onSelected(itemIdx, item);
   }
 </script>
 
@@ -121,25 +155,25 @@
     />
 
     <div class="overflow-y-auto my-2">
-      {#each filteredItems as item, idx}
-        {@const item2 = item || "(empty)"}
+      {#each filteredItems as itemIdx, idx}
+        {@const item = items[itemIdx] || "(empty)"}
         {#if idx === selectedIdx}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
             class="cursor-pointer px-3 py-1 bg-gray-100"
             use:scrollintoview
-            on:click={() => selectItem(item)}
+            on:click={() => selectItem(itemIdx)}
           >
-            {item2}
+            {item}
           </div>
         {:else}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
             class="cursor-pointer px-3 py-1"
-            on:click={() => selectItem(item)}
+            on:click={() => selectItem(itemIdx)}
             on:mouseenter={() => mouseEnter(idx)}
           >
-            {item2}
+            {item}
           </div>
         {/if}
       {/each}

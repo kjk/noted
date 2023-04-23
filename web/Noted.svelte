@@ -40,7 +40,7 @@
   }
   let newNoteShortcut = "<tt>Alt + N</tt>";
   if (browser.mac) {
-    newNoteShortcut = "<tt>⌘ + N</tt>";
+    newNoteShortcut = "<tt>Ctrl + N</tt>";
   }
 
   let notes = [];
@@ -144,7 +144,7 @@
    * @param {KeyboardEvent} ev
    */
   function isNewPageShortcut(ev) {
-    if (browser.mac && ev.metaKey && ev.key === "n") {
+    if (browser.mac && ev.altKey && ev.code === "KeyN") {
       return true;
     }
     if (browser.windows && ev.altKey && ev.key === "n") {
