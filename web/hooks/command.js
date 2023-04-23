@@ -1,8 +1,9 @@
-import { EventEmitter } from "../../plugos/event.js";
+import { EventEmitter } from "../plugos/event.js";
 export class CommandHook extends EventEmitter {
   constructor() {
-    super(...arguments);
-    this.editorCommands = /* @__PURE__ */ new Map();
+    // super(...arguments); // TODO: was it a mistake?
+    super();
+    this.editorCommands = new Map();
   }
   buildAllCommands(system) {
     this.editorCommands.clear();

@@ -25,6 +25,13 @@
   } from "./lib/github_login";
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
   import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
+  import CommandPalette from "./CommandPalette.svelte";
+
+  let commandPaletteItems = [];
+  let showingCommandPalette = false;
+  let onCommandPaletteSelected = (idx, item) => {
+    console.log("onCommandPaletteSelected:", idx, item);
+  };
 
   let notes = [];
 
@@ -69,10 +76,6 @@
     setEditorText(s);
   }
 
-  function clearOutput() {
-    errorMsg = "";
-  }
-
   async function handleDocChanged(tr) {
     let s = editor.getText();
     await noteAddVersion(note, s);
@@ -89,20 +92,42 @@
     editor.setText(s);
   }
 
+  async function onPageSelected(idx, item) {
+    console.log("onPageSelected:", idx, item);
+    if (idx === -1) {
+      await createNewNote(item);
+    } else {
+      let n = notes[idx];
+      await openNote(n);
+    }
+    showingCommandPalette = false;
+  }
+
+  async function selectPage() {
+    // console.log("selectPage");
+    if (len(notes) === 0) {
+      return;
+    }
+    commandPaletteItems = [];
+    for (let n of notes) {
+      let title = noteGetTitle(n);
+      commandPaletteItems.push(title);
+    }
+    onCommandPaletteSelected = onPageSelected;
+    showingCommandPalette = true;
+  }
+
   /**
    * @param {KeyboardEvent} ev
    */
   function onKeyDown(ev) {
-    if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") {
-    } else if ((ev.ctrlKey || ev.metaKey) && ev.key === "s") {
-    } else if (ev.key === "Escape") {
-      clearOutput();
-    } else {
+    // TODO: different on Windows?
+    if (ev.metaKey && ev.key === "k") {
+      selectPage();
+      ev.preventDefault();
+      ev.stopPropagation();
       return;
     }
-
-    ev.preventDefault();
-    ev.stopPropagation();
   }
 
   /**
@@ -125,11 +150,14 @@
     }
   }
 
-  async function createNewNote() {
+  async function createNewNote(title = "") {
     console.log("createNewNote");
-    let n = await newNote("");
-    openNote(n);
-    titleEl.focus();
+    let n = await newNote(title);
+    await openNote(n);
+    if (title === "") {
+      titleEl.focus();
+    }
+    notes = await getNotes();
   }
 
   async function loginGitHub() {
@@ -147,9 +175,22 @@
   /**
    * @param {Note} n
    */
-  function openNote(n) {
+  async function openNote(n) {
+    if (note === n) {
+      if (n) {
+        editor.focus();
+      }
+      return;
+    }
+    // pre-cache the note content to avoid visible switch
+    if (n) {
+      await noteGetCurrentVersion(n);
+    }
     note = n;
     editor.currentNote = n;
+    if (n) {
+      editor.focus();
+    }
   }
 
   async function setLastNote() {
@@ -158,20 +199,15 @@
     console.log("notes:", nNotes);
     if (nNotes === 0) {
       await createNewNote();
-      notes = await getNotes();
     } else {
       let currNote = notes[nNotes - 1];
-      openNote(currNote);
-      for (let n of notes) {
-        let title = noteGetTitle(n);
-        console.log(title);
-      }
+      await openNote(currNote);
     }
   }
 
   async function doOnGitHubLogin() {
     console.log("doOnGitHubLogin");
-    openNote(null);
+    await openNote(null);
     changeToRemoteStore();
     await setLastNote();
   }
@@ -194,8 +230,6 @@
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      // TODO: probably not needed as we aggresively save on changes
-      // setNotes(notes);
     };
   });
 </script>
@@ -218,8 +252,10 @@
       aria-multiline="false"
       class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white placeholder:italic"
     />
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
-      use:gtooltip={"click for a list, <b>Ctrl + K</b> to invoke"}
+      on:click|preventDefault|stopPropagation={selectPage}
+      use:gtooltip={"<b>Ctrl + K</b>"}
       class="cursor-pointer text-sm flex items-center gap-x-2 hover:bg-gray-100 px-2 py-0.5"
     >
       <div>{len(notes)}</div>
@@ -317,6 +353,15 @@
   <div class="fixed flash-msg bg-yellow-100 border px-2 py-1 text-sm">
     {flashMsg}
   </div>
+{/if}
+
+{#if showingCommandPalette}
+  <CommandPalette
+    items={commandPaletteItems}
+    onSelected={onCommandPaletteSelected}
+    bind:open={showingCommandPalette}
+    allowCreateOnEnter={true}
+  />
 {/if}
 
 <style>

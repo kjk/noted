@@ -403,6 +403,11 @@ export async function newNote(title, type = "md") {
 }
 
 export async function noteAddVersion(note, content) {
+  let currContent = await store.noteGetCurrentVersion(note);
+  if (currContent == content) {
+    console.log("skipping addVersion, content is the same");
+    return;
+  }
   return store.noteAddVersion(note, content);
 }
 
@@ -411,6 +416,10 @@ export function noteGetTitle(note) {
 }
 
 export function noteSetTitle(note, title) {
+  let currTitle = store.getTitle(note);
+  if (currTitle == title) {
+    return;
+  }
   return store.setTitle(note, title);
 }
 
