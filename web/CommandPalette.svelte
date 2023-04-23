@@ -122,6 +122,7 @@
 
     <div class="overflow-y-auto my-2">
       {#each filteredItems as item, idx}
+        {@const item2 = item || "(empty)"}
         {#if idx === selectedIdx}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
@@ -129,7 +130,7 @@
             use:scrollintoview
             on:click={() => selectItem(item)}
           >
-            {item}
+            {item2}
           </div>
         {:else}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -138,7 +139,7 @@
             on:click={() => selectItem(item)}
             on:mouseenter={() => mouseEnter(idx)}
           >
-            {item}
+            {item2}
           </div>
         {/if}
       {/each}

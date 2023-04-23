@@ -34,6 +34,15 @@
     console.log("onCommandPaletteSelected:", idx, item);
   };
 
+  let cmdPaletteShortcut = "<tt>Ctrl + K</tt>";
+  if (browser.mac) {
+    cmdPaletteShortcut = "<tt>⌘ + K</tt>";
+  }
+  let newNoteShortcut = "<tt>Alt + N</tt>";
+  if (browser.mac) {
+    newNoteShortcut = "<tt>⌘ + N</tt>";
+  }
+
   let notes = [];
 
   /** @type {HTMLElement} */
@@ -121,20 +130,47 @@
   /**
    * @param {KeyboardEvent} ev
    */
-  function onKeyDown(ev) {
-    let showSelectPage = false;
+  function isShowSelectPageShortcut(ev) {
     if (browser.mac && ev.metaKey && ev.key === "k") {
-      showSelectPage = true;
+      return true;
     }
     if (browser.windows && ev.ctrlKey && ev.key === "k") {
-      showSelectPage = true;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @param {KeyboardEvent} ev
+   */
+  function isNewPageShortcut(ev) {
+    if (browser.mac && ev.metaKey && ev.key === "n") {
+      return true;
+    }
+    if (browser.windows && ev.altKey && ev.key === "n") {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @param {KeyboardEvent} ev
+   */
+  function onKeyDown(ev) {
+    let handled = false;
+    if (isShowSelectPageShortcut(ev)) {
+      selectPage();
+      handled = true;
     }
 
-    if (showSelectPage) {
-      selectPage();
+    if (isNewPageShortcut(ev)) {
+      createNewNote();
+      handled = true;
+    }
+
+    if (handled) {
       ev.preventDefault();
       ev.stopPropagation();
-      return;
     }
   }
 
@@ -263,7 +299,7 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
       on:click|preventDefault|stopPropagation={selectPage}
-      use:gtooltip={"<b>Ctrl + K</b>"}
+      use:gtooltip={cmdPaletteShortcut}
       class="cursor-pointer text-sm flex items-center gap-x-2 hover:bg-gray-100 px-2 py-0.5"
     >
       <div>{len(notes)}</div>
@@ -271,7 +307,7 @@
       <SvgArrowDown class="w-2 h-2" />
     </div>
     <button
-      use:gtooltip={"<b>Ctrl + Shift + N</b>"}
+      use:gtooltip={newNoteShortcut}
       on:click={createNewNote}
       class="relative text-sm border ml-2 border-gray-300 hover:bg-gray-100 rounded-md py-0.5 px-2"
       >new note</button
