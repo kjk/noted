@@ -2,7 +2,7 @@
   /** @typedef { import("@codemirror/state").Extension} Extension */
   /** @typedef {import("./notesStore").Note} Note */
 
-  import { debounce, len, pluralize } from "./lib/util";
+  import { debounce, len, pluralize, throwIf } from "./lib/util";
   import { onMount } from "svelte";
   import {
     noteAddVersion,
@@ -13,6 +13,7 @@
     noteSetTitle,
     changeToRemoteStore,
     changeToLocalStore,
+    noteDelete,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -25,13 +26,18 @@
   } from "./lib/github_login";
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
   import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
-  import CommandPalette from "./CommandPalette.svelte";
+  import CommandPalette, {
+    kSelectedCommand,
+    kSelectedName,
+  } from "./CommandPalette.svelte";
   import browser from "./lib/browser";
 
-  let commandPaletteItems = [];
+  let commandPalettePageNames = [];
+  let commandPaletteCommands = ["Delete Note"];
+  let commadnPaletteSearchTerm = "";
   let showingCommandPalette = false;
-  let onCommandPaletteSelected = (idx, item) => {
-    console.log("onCommandPaletteSelected:", idx, item);
+  let onCommandPaletteSelected = (kind, idx, item) => {
+    console.log("onCommandPaletteSelected:", kind, idx, item);
   };
 
   let cmdPaletteShortcut = "<tt>Ctrl + K</tt>";
@@ -102,35 +108,69 @@
     editor.setText(s);
   }
 
-  async function onPageSelected(idx, item) {
-    console.log("onPageSelected:", idx, item);
-    if (idx === -1) {
-      await createNewNote(item);
+  async function deleteCurrentNote() {
+    console.log("deleteCurrentNote:", note);
+    notes = await noteDelete(note);
+    /** @type {Note} */
+    let newNote = null;
+    if (len(notes) === 0) {
+      await createNewNote();
+      return;
+    }
+    // TODO: this should use navigation stack
+    newNote = notes[0];
+    await openNote(newNote);
+  }
+
+  async function onNoteOrCommandSelected(kind, idx, item) {
+    console.log("onNoteOrCommandSelected:", kind, idx, item);
+    if (kind === kSelectedName) {
+      if (idx === -1) {
+        await createNewNote(item);
+      } else {
+        let n = notes[idx];
+        await openNote(n);
+      }
+    } else if (kind === kSelectedCommand) {
+      console.log("command:", item);
+      if (item === "Delete Note") {
+        await deleteCurrentNote();
+      }
     } else {
-      let n = notes[idx];
-      await openNote(n);
+      throwIf(true, `unknown kind: ${kind}`);
     }
     showingCommandPalette = false;
   }
 
-  async function selectPage() {
+  async function runCommandPalette(startWithCommands) {
     // console.log("selectPage");
-    if (len(notes) === 0) {
-      return;
-    }
-    commandPaletteItems = [];
-    for (let n of notes) {
+    let nNotes = len(notes);
+    commandPalettePageNames.length = nNotes;
+    for (let i = 0; i < nNotes; i++) {
+      let n = notes[i];
       let title = noteGetTitle(n);
-      commandPaletteItems.push(title);
+      commandPalettePageNames[i] = title;
     }
-    onCommandPaletteSelected = onPageSelected;
+    onCommandPaletteSelected = onNoteOrCommandSelected;
+    commadnPaletteSearchTerm = "";
+    if (startWithCommands) {
+      commadnPaletteSearchTerm = "> ";
+    }
     showingCommandPalette = true;
+  }
+
+  async function selectCommand() {
+    runCommandPalette(true);
+  }
+
+  async function selectPage() {
+    runCommandPalette(false);
   }
 
   /**
    * @param {KeyboardEvent} ev
    */
-  function isShowSelectPageShortcut(ev) {
+  function isShowSelectPageOrCommandShortcut(ev) {
     if (browser.mac && ev.metaKey && ev.key === "k") {
       return true;
     }
@@ -158,8 +198,12 @@
    */
   function onKeyDown(ev) {
     let handled = false;
-    if (isShowSelectPageShortcut(ev)) {
-      selectPage();
+    if (isShowSelectPageOrCommandShortcut(ev)) {
+      if (ev.shiftKey) {
+        selectCommand();
+      } else {
+        selectPage();
+      }
       handled = true;
     }
 
@@ -373,8 +417,10 @@
 
 {#if showingCommandPalette}
   <CommandPalette
-    items={commandPaletteItems}
+    names={commandPalettePageNames}
+    commands={commandPaletteCommands}
     onSelected={onCommandPaletteSelected}
+    startSearchTem={commadnPaletteSearchTerm}
     bind:open={showingCommandPalette}
     allowCreateOnEnter={true}
   />

@@ -15,7 +15,8 @@ const keyGithubUserInfo = "noted:gh-user-info";
 // localStorage key for login redirect
 export const keyTempLoginRedirect = "noted:login-redirect";
 
-let onGitHubLogin; // function
+/** @type {Function} */
+let onGitHubLogin;
 
 export function setOnGitHubLogin(cb) {
   onGitHubLogin = cb;
@@ -90,7 +91,7 @@ export async function setToken(token) {
     console.log("github.getLoggedUserInfo() returned:", um);
     storeGithubUserInfo(um);
     if (onGitHubLogin) {
-      onGitHubLogin();
+      await onGitHubLogin();
     }
   } catch (ex) {
     console.log("github.getLoggedUserInfo() failed with:", ex);

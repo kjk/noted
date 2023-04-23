@@ -22,6 +22,23 @@ const kLogChangeContent = 3;
 const kLogChangeKind = 4;
 const kLogDeleteNote = 5;
 
+function logOpName(op) {
+  switch (op) {
+    case kLogCreateNote:
+      return "kLogCreateNote";
+    case kLogChangeTitle:
+      return "kLogChangeTitle";
+    case kLogChangeContent:
+      return "kLogChangeContent";
+    case kLogChangeKind:
+      return "kLogChangeKind";
+    case kLogDeleteNote:
+      return "kLogDeleteNote";
+    default:
+      return `unknown op ${op}`;
+  }
+}
+
 const kNoteIdxID = 0;
 const kNoteIdxTitle = 1;
 const kNoteIdxKind = 2;
@@ -74,6 +91,18 @@ class StoreCommon {
   /** @type {Note[]} */
   notes = [];
 
+  /**
+   * @param {string} id
+   */
+  deleteNoteById(id) {
+    console.log("deleteNoteById:", id);
+    // let idx = this.notesMap.get(id);
+    // this.notesFlattened.splice(idx, 1);
+    this.notesMap.delete(id);
+    // TODO: make faster. we can rewrite the array in place
+    this.notes = this.notes.filter((n) => n.valueOf() != id);
+  }
+
   applyLog(log) {
     console.log("applyLog", log);
     let op = log[0];
@@ -118,7 +147,14 @@ class StoreCommon {
       return note;
     }
 
-    throwIf(!this.notesMap.has(id), `note ${id} not found`);
+    if (!this.notesMap.has(id)) {
+      let opName = logOpName(op);
+      console.log(
+        `applyLog: note ${id}, op: ${op} (${opName}) not found. Was deleted?`
+      );
+      return;
+    }
+
     let idx = this.notesMap.get(id);
     if (op === kLogChangeTitle) {
       let title = log[3];
@@ -133,11 +169,7 @@ class StoreCommon {
       this.notesFlattened[idx + kNoteIdxKind] = kind;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogDeleteNote) {
-      // let idx = this.notesMap.get(id);
-      // this.notesFlattened.splice(idx, 1);
-      this.notesMap.delete(id);
-      // TODO: make faster
-      this.notes = this.notes.filter((n) => n.valueOf() != id);
+      this.deleteNoteById(id);
     } else {
       throw new Error(`unknown log op ${op}`);
     }
@@ -243,10 +275,16 @@ export class StoreLocal extends StoreCommon {
     await this.appendLog(log);
   }
 
+  /**
+   * @param {Note} note
+   * @returns {Promise<Note[]>}
+   */
   async deleteNote(note) {
     let id = note.valueOf();
     let log = mkLogDeleteNote(id);
     await this.appendLog(log);
+    this.deleteNoteById(id);
+    return this.notes;
   }
 }
 
@@ -368,10 +406,15 @@ export class StoreRemote extends StoreCommon {
     await this.appendLog(log);
   }
 
+  /**
+   * @param {Note} note
+   * @returns {Promise<Note[]>}
+   */
   async deleteNote(note) {
     let id = note.valueOf();
     let log = mkLogDeleteNote(id);
     await this.appendLog(log);
+    return this.notes;
   }
 }
 
@@ -423,7 +466,7 @@ export function noteSetTitle(note, title) {
   return store.setTitle(note, title);
 }
 
-export function noteDelete(note) {
+export async function noteDelete(note) {
   return store.deleteNote(note);
 }
 

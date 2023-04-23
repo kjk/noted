@@ -1,5 +1,10 @@
+<script context="module">
+  export const kSelectedName = 1;
+  export const kSelectedCommand = 2;
+</script>
+
 <script>
-  import { onMount, tick } from "svelte";
+  import { onMount } from "svelte";
   import Overlay from "./lib/Overlay.svelte";
   import { len, clamp } from "./lib/util.js";
   import { scrollintoview } from "./actions/scrollintoview.js";
@@ -7,25 +12,30 @@
   import { focus } from "./actions/focus";
 
   export let open = false;
-  /** @type {string[]}*/
-  export let items = [];
+  /** @type {string[]} */
+  export let names = [];
+  /** @type {string[]} */
+  export let commands = [];
+  /** @type {string} */
+  export let startSearchTem = "";
   export let allowCreateOnEnter = false;
-  export let onSelected = (idx, item) => {};
+  export let onSelected = (kind, idx, item) => {};
 
   /** @type {string[]}*/
-  let itemsLowerCase = [];
+  let namesLowerCase = [];
+  /** @type {string[]}*/
+  let commandsLowerCase = [];
   /** @type {number[]}*/
   let filteredItems = [];
+  let selectedFrom = kSelectedName;
+
   let searchTerm = "";
   let selectedIdx = 0;
-  let ignoreNextMouseEnter = false;
 
   /** @type {HTMLElement} */
   let inputEl;
 
   $: filterItems(searchTerm);
-
-  function getMatchingItems(s) {}
 
   /**
    * @param {string} searchTerm
@@ -34,34 +44,44 @@
     // current selection is invalidated after changing the list
     // in that case reset selection to first item
     let selectedItem = -1;
-    let a = filteredItems;
-    if (selectedIdx >= 0 && selectedIdx < len(a)) {
-      selectedItem = a[selectedIdx];
+    let dst = filteredItems;
+    if (selectedIdx >= 0 && selectedIdx < len(dst)) {
+      selectedItem = dst[selectedIdx];
     }
+    let prevSelectedFrom = selectedFrom;
     let s = searchTerm.trim();
+    selectedFrom = kSelectedName;
+    let src = namesLowerCase;
+    if (s.startsWith(">")) {
+      selectedFrom = kSelectedCommand;
+      s = s.slice(1).trim();
+      src = commandsLowerCase;
+    }
     if (s === "") {
-      resetFilteredItems();
-      if (selectedItem !== -1) {
-        selectedIdx = selectedItem;
-      }
+      resetFilteredItems(selectedFrom);
+      selectedIdx = 0;
+      // if (selectedItem !== -1 && selectedFrom === prevSelectedFrom) {
+      //   selectedIdx = selectedItem;
+      // }
       return;
     }
 
     s = s.toLowerCase();
     let idx = 0;
-    for (let i = 0; i < len(items); i++) {
-      const item = itemsLowerCase[i];
+    let nSrc = len(src);
+    for (let i = 0; i < nSrc; i++) {
+      const item = src[i];
       if (!item.includes(s)) {
         continue;
       }
-      a[idx] = i;
+      dst[idx] = i;
       if (i === selectedItem) {
         selectedIdx = idx;
       }
       idx++;
     }
-    a.length = idx;
-    filteredItems = a;
+    dst.length = idx;
+    filteredItems = dst;
   }
 
   /**
@@ -71,12 +91,12 @@
     // console.log("handleKeyDown", ev.code);
     if (ev.code === "Enter") {
       const itemIdx = filteredItems[selectedIdx];
-      if (typeof itemIdx === "number" && itemIdx >= 0 && itemIdx < len(items)) {
+      if (typeof itemIdx === "number" && itemIdx >= 0 && itemIdx < len(names)) {
         selectItem(itemIdx);
         return;
       }
       if (allowCreateOnEnter && searchTerm !== "") {
-        onSelected(-1, searchTerm);
+        onSelected(selectedFrom, -1, searchTerm);
         return;
       }
       return;
@@ -96,35 +116,44 @@
     ev.preventDefault();
 
     selectedIdx = clamp(selectedIdx + dir, 0, len(filteredItems) - 1);
-    // changing selected element triggers mouseenter
-    // on the element so we have to supress it
-    ignoreNextMouseEnter = true;
   }
 
-  function mouseEnter(idx) {
-    if (ignoreNextMouseEnter) {
-      ignoreNextMouseEnter = false;
-      return;
-    }
+  function mouseClick(idx) {
+    console.log(`mouseClick: selectedIdx: ${selectedIdx}, idx: ${idx}`);
     selectedIdx = idx;
   }
 
-  function resetFilteredItems() {
-    let nItems = len(items);
-    filteredItems.length = nItems;
-    for (let i = 0; i < nItems; i++) {
+  function resetFilteredItems(kind) {
+    let nMaxFiltered = Math.max(len(names), len(commands));
+    filteredItems.length = nMaxFiltered;
+    for (let i = 0; i < nMaxFiltered; i++) {
       filteredItems[i] = i;
+    }
+    let n = len(names);
+    if (kind === kSelectedCommand) {
+      n = len(commands);
+    }
+    filteredItems.length = n;
+    selectedFrom = kind;
+  }
+
+  function makeLowerCased(src, dst) {
+    let n = len(src);
+    dst.length = n;
+    for (let i = 0; i < n; i++) {
+      dst[i] = src[i].toLowerCase();
     }
   }
 
   onMount(() => {
-    let nItems = len(items);
-    itemsLowerCase = Array(nItems);
-    for (let i = 0; i < nItems; i++) {
-      itemsLowerCase[i] = items[i].toLowerCase();
-    }
-    filteredItems = Array(nItems);
-    resetFilteredItems();
+    selectedIdx = 0;
+    searchTerm = startSearchTem;
+    makeLowerCased(names, namesLowerCase);
+    makeLowerCased(commands, commandsLowerCase);
+
+    let nMaxFiltered = Math.max(len(names), len(commands));
+    filteredItems = Array(nMaxFiltered);
+    resetFilteredItems(kSelectedName);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
@@ -135,19 +164,28 @@
    * @param {number} itemIdx
    */
   function selectItem(itemIdx) {
-    let item = items[itemIdx];
-    onSelected(itemIdx, item);
+    let item = getItem(itemIdx);
+    onSelected(selectedFrom, itemIdx, item);
+  }
+
+  function getItem(idx) {
+    let a = names;
+    if (selectedFrom === kSelectedCommand) {
+      a = commands;
+    }
+    return a[idx] || "(no title)";
   }
 </script>
 
 <Overlay bind:open>
   <div
-    class="dialog min-w-[44ch] fixed flex flex-col bg-white border shadow-md"
+    class="dialog min-w-[44ch] fixed flex flex-col bg-white border shadow-md text-sm"
   >
     <!-- svelte-ignore a11y-autofocus -->
 
     <input
       bind:this={inputEl}
+      placeholder="Search notes by title"
       class="outline-none border mx-3 mb-2 mt-3 px-2 py-1 text-sm"
       bind:value={searchTerm}
       use:focus
@@ -156,22 +194,22 @@
 
     <div class="overflow-y-auto my-2">
       {#each filteredItems as itemIdx, idx}
-        {@const item = items[itemIdx] || "(empty)"}
+        {@const item = getItem(itemIdx)}
         {#if idx === selectedIdx}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
-            class="cursor-pointer px-3 py-1 bg-gray-100"
+            class="cursor-pointer px-3 py-0.5 bg-gray-100 hover:bg-gray-200"
             use:scrollintoview
-            on:click={() => selectItem(itemIdx)}
+            on:dblclick={() => selectItem(itemIdx)}
           >
             {item}
           </div>
         {:else}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
-            class="cursor-pointer px-3 py-1"
-            on:click={() => selectItem(itemIdx)}
-            on:mouseenter={() => mouseEnter(idx)}
+            class="cursor-pointer px-3 py-0.5 hover:bg-gray-200"
+            on:dblclick={() => selectItem(itemIdx)}
+            on:click={() => mouseClick(idx)}
           >
             {item}
           </div>
@@ -186,7 +224,7 @@
       <div>&nbsp; &crarr; to select</div>
       <div>Esc to close</div>
     </div>
-    {#if allowCreateOnEnter && searchTerm !== ""}
+    {#if selectedFrom === kSelectedName && allowCreateOnEnter && searchTerm !== ""}
       <div
         class="flex justify-between text-xs px-2 py-1 bg-gray-50 text-gray-600"
       >
