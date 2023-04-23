@@ -26,6 +26,7 @@
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
   import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
   import CommandPalette from "./CommandPalette.svelte";
+  import browser from "./lib/browser";
 
   let commandPaletteItems = [];
   let showingCommandPalette = false;
@@ -121,8 +122,15 @@
    * @param {KeyboardEvent} ev
    */
   function onKeyDown(ev) {
-    // TODO: different on Windows?
-    if (ev.metaKey && ev.key === "k") {
+    let showSelectPage = false;
+    if (browser.mac && ev.metaKey && ev.key === "k") {
+      showSelectPage = true;
+    }
+    if (browser.windows && ev.ctrlKey && ev.key === "k") {
+      showSelectPage = true;
+    }
+
+    if (showSelectPage) {
       selectPage();
       ev.preventDefault();
       ev.stopPropagation();
@@ -311,34 +319,6 @@
       bind:this={editorElement}
     />
   </div>
-
-  {#if len(notes) === 0}
-    <div />
-  {:else}
-    <div class="bg-gray-50 flex items-baseline gap-x-2">
-      <div>Recent notes:</div>
-      {#each notes as n, i}
-        {@const n2 = notes[len(notes) - 1 - i]}
-        {@const title = noteGetTitle(n2)}
-        {#if i < 4}
-          <button
-            class="underline max-w-[6rem] truncate"
-            on:click={() => openNote(n2)}>{title}</button
-          >
-          {#if i < 3}
-            <!-- <div>&bull;</div> -->
-          {/if}
-        {/if}
-      {/each}
-      {#if len(notes) > 3}
-        {@const n = len(notes) - 3}
-        <div class="flex">
-          <div>and</div>
-          <button class="underline ml-1">{n} more</button>
-        </div>
-      {/if}
-    </div>
-  {/if}
 </div>
 
 {#if errorMsg !== ""}

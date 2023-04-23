@@ -166,9 +166,9 @@
   font-size: 1em;
 }
 #sb-editor .sb-hashtag {
-  color: #e2e9ff;
-  background-color: #002b6aad;
-  border: 1px solid #0120416b;
+  color: #0e0e0e;
+  background-color: #ededed;
+  /* border: 1px solid #0120416b; */
   border-radius: 6px;
   padding: 0 3px;
   margin: 0 -3px;
