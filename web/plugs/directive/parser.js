@@ -2,7 +2,8 @@ import {
   collectNodesOfType,
   findNodeOfType,
   replaceNodesMatching,
-} from "$sb/lib/tree.js";
+} from "../../plug-api/lib/tree.js";
+
 export function parseQuery(queryTree) {
   replaceNodesMatching(queryTree, (n) => {
     if (!n.type) {

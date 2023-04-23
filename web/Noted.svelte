@@ -32,8 +32,6 @@
   let editorElement;
   /** @type {Editor} */
   let editor;
-  let outputMsg = "";
-  let statusMsg = "";
   let errorMsg = "";
 
   /** @type {Note} */
@@ -72,7 +70,6 @@
   }
 
   function clearOutput() {
-    outputMsg = "";
     errorMsg = "";
   }
 
@@ -90,15 +87,6 @@
     // TODO: will need to change extensions based on
     // type of s
     editor.setText(s);
-  }
-
-  function setProcessingMessage(s) {
-    statusMsg = s;
-    clearErrorMessage();
-  }
-
-  function clearProcessingMessage() {
-    setProcessingMessage("");
   }
 
   function setErrorMessage(s) {
@@ -128,10 +116,17 @@
    * @param {KeyboardEvent} ev
    */
   function onTitleKeyDown(ev) {
-    if (ev.key === "Enter") {
+    if (ev.key === "Enter" || ev.key === "Escape") {
       ev.stopPropagation();
       ev.preventDefault();
-      console.log("editor:", editor);
+      editor.focus();
+      return;
+    }
+    if (ev.key === "ArrowDown") {
+      ev.stopPropagation();
+      ev.preventDefault();
+      // TODO: set cursor to start of editor
+      editor.moveCursor(0);
       editor.focus();
       return;
     }
@@ -199,8 +194,6 @@
     editor.docChanged = debounce(handleDocChanged, 1000);
     document.addEventListener("keydown", onKeyDown);
 
-    clearProcessingMessage();
-
     await setLastNote();
 
     return () => {
@@ -219,7 +212,7 @@
   >
     <div
       tabindex="0"
-      use:gtooltip={"click to edit title, <b><tt>Ctrl + 1</tt></b> to switch"}
+      use:gtooltip={"click to edit title"}
       bind:this={titleEl}
       on:keydown={onTitleKeyDown}
       contenteditable="true"
@@ -259,7 +252,7 @@
         <div class="mt-1 text-gray-700">
           <SvgArrowDown class="w-2 h-2" />
           <div
-            class="hidden absolute text-sm flex-col border shadow left-0 top-full py-2 z-20 group-hover:flex"
+            class="hidden absolute text-sm flex-col border shadow left-0 top-full py-2 z-20 group-hover:flex bg-white"
           >
             <button
               on:click={logoutGitHub}
@@ -316,36 +309,11 @@
   {/if}
 </div>
 
-{#if statusMsg != ""}
-  <div class="status fixed bg-yellow-100 min-w-[12em] border px-2 py-1 text-sm">
-    {statusMsg}
-  </div>
-{/if}
-
 {#if errorMsg !== ""}
   <div
     class="status fixed min-w-[12em] border px-2 py-1 text-sm bg-white text-red-500 whitespace-pre"
   >
     {errorMsg}
-  </div>
-{/if}
-
-{#if outputMsg !== ""}
-  <div
-    class="output flex flex-col fixed text-xs shadow-md border border-gray-400 rounded-lg bg-white px-1"
-  >
-    <div class="flex bg-gray-50 border-b mb-1 pb-1 pt-1">
-      <div class="font-bold">Output</div>
-      <div class="grow" />
-      <button
-        on:click={clearOutput}
-        class="hover:bg-gray-400 text-xs hover:text-white text-gray-600 mr-1"
-        >close</button
-      >
-    </div>
-    <div class="overflow-auto">
-      <pre><code>{outputMsg}</code></pre>
-    </div>
   </div>
 {/if}
 

@@ -1,22 +1,25 @@
-import { EditorView, Vim, vimGetCm } from "../deps.js";
+import { Vim, vimGetCm } from "../deps.js";
 
 export function editorSyscalls(editor) {
   const syscalls = {
     "editor.getCurrentPage": () => {
+      throw new Error("editor.getCurrentPage is deprecated");
       return editor.currentPage;
     },
     "editor.getText": () => {
-      return editor.editorView?.state.sliceDoc();
+      return editor.getText();
     },
     "editor.getCursor": () => {
-      return editor.editorView.state.selection.main.from;
+      return editor.getCursor();
     },
     "editor.getSelection": () => {
-      return editor.editorView.state.selection.main;
+      return editor.getSelection();
     },
     "editor.save": () => {
+      throw new Error("editor.save is deprecated");
       return editor.save(true);
     },
+
     "editor.navigate": async (
       _ctx,
       name,
@@ -30,10 +33,7 @@ export function editorSyscalls(editor) {
       await editor.reloadPage();
     },
     "editor.openUrl": (_ctx, url) => {
-      const win = window.open(url, "_blank");
-      if (win) {
-        win.focus();
-      }
+      editor.opoenUrl(url);
     },
     "editor.downloadFile": (_ctx, filename, dataUrl) => {
       const link = document.createElement("a");
@@ -84,45 +84,16 @@ export function editorSyscalls(editor) {
       });
     },
     "editor.moveCursor": (_ctx, pos, center = false) => {
-      editor.editorView.dispatch({
-        selection: {
-          anchor: pos,
-        },
-      });
-      if (center) {
-        editor.editorView.dispatch({
-          effects: [
-            EditorView.scrollIntoView(pos, {
-              y: "center",
-            }),
-          ],
-        });
-      }
+      editor.moveCursor(pos, center);
     },
     "editor.setSelection": (_ctx, from, to) => {
-      const editorView = editor.editorView;
-      editorView.dispatch({
-        selection: {
-          anchor: from,
-          head: to,
-        },
-      });
+      editor.setSelection(from, to);
     },
     "editor.insertAtCursor": (_ctx, text) => {
-      const editorView = editor.editorView;
-      const from = editorView.state.selection.main.from;
-      editorView.dispatch({
-        changes: {
-          insert: text,
-          from,
-        },
-        selection: {
-          anchor: from + text.length,
-        },
-      });
+      editor.insertAtCursor(text);
     },
     "editor.dispatch": (_ctx, change) => {
-      editor.editorView.dispatch(change);
+      editor.dispatch(change);
     },
     "editor.prompt": (_ctx, message, defaultValue = "") => {
       return editor.prompt(message, defaultValue);

@@ -3,6 +3,7 @@ import {
   EditorView,
   LanguageDescription,
   LanguageSupport,
+  SelectionRange,
   StreamLanguage,
   ViewPlugin,
   autocompletion,
@@ -51,6 +52,7 @@ import {
 } from "./cm_plugins/editor_paste.js";
 
 import { SlashCommandHook } from "./hooks/slash_command.js";
+import { Tag } from "./deps.js";
 import { applyLineReplace } from "./plugs/core/template.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
@@ -95,6 +97,43 @@ class CodeWidgetHook {
   }
 }
 
+// based on core_plug.json
+let coreMdExts = {
+  Hashtag: {
+    firstCharacters: ["#"],
+    regex: "#[^#\\d\\s\\[\\]]+\\w+",
+    className: "sb-hashtag",
+  },
+  NakedURL: {
+    firstCharacters: ["h"],
+    regex:
+      "https?:\\/\\/[-a-zA-Z0-9@:%._\\+~#=]{1,256}([-a-zA-Z0-9()@:%_\\+.~#?&=\\/]*)",
+    className: "sb-naked-url",
+  },
+  NamedAnchor: {
+    firstCharacters: ["$"],
+    regex: "\\$[a-zA-Z\\.\\-\\/]+[\\w\\.\\-\\/]*",
+    className: "sb-named-anchor",
+  },
+};
+
+// based on loadMarkdownExtensions
+function loadCoreMarkdownExtensions() {
+  let exts = [];
+  for (let [nodeType, def] of Object.entries(coreMdExts)) {
+    let ext = {
+      nodeType,
+      tag: Tag.define(),
+      firstCharCodes: def.firstCharacters.map((ch) => ch.charCodeAt(0)),
+      regex: new RegExp("^" + def.regex),
+      styles: def.styles,
+      className: def.className,
+    };
+    exts.push(ext);
+  }
+  return exts;
+}
+
 export class Editor {
   /** @type {HTMLElement} */
   editorElement;
@@ -108,7 +147,11 @@ export class Editor {
   currentPage = ""; // TODO: get rid of it
   codeWidgetHook;
   slashCommandHook;
+  viewDispatch;
 
+  /**
+   * @param {import("@codemirror/state").Transaction} tr
+   */
   dispatchTransaction(tr) {
     this.editorView.update([tr]);
 
@@ -126,7 +169,10 @@ export class Editor {
       return embedWidget(bodyText);
     });
     this.slashCommandHook = new SlashCommandHook(this);
-
+    this.viewDispatch = (args) => {
+      console.log("viewDispatch:", args);
+    };
+    this.mdExtensions = loadCoreMarkdownExtensions();
     this.slashCommandHook.add(
       "makeH3",
       {
@@ -138,7 +184,6 @@ export class Editor {
       applyLineReplace
     );
 
-    // this.viewDispatch = () => {};
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
       parent: editorElement,
@@ -147,6 +192,7 @@ export class Editor {
       },
     });
 
+    // TODO: long term we want to undo this redirection
     let syscall = editorSyscalls(this);
     setEdiotrSyscall(syscall);
   }
@@ -336,14 +382,110 @@ export class Editor {
     });
   }
 
+  dispatch(change) {
+    let editor = this;
+    editor.editorView.dispatch(change);
+  }
+
+  prompt(message, defaultValue = "") {
+    return new Promise((resolve) => {
+      this.viewDispatch({
+        type: "show-prompt",
+        message,
+        defaultValue,
+        callback: (value) => {
+          this.viewDispatch({ type: "hide-prompt" });
+          this.focus();
+          resolve(value);
+        },
+      });
+    });
+  }
+  confirm(message) {
+    return new Promise((resolve) => {
+      this.viewDispatch({
+        type: "show-confirm",
+        message,
+        callback: (value) => {
+          this.viewDispatch({ type: "hide-confirm" });
+          this.focus();
+          resolve(value);
+        },
+      });
+    });
+  }
+
+  /**
+   * @param {number} pos
+   * @param {boolean} center
+   */
+  moveCursor(pos, center = false) {
+    let editor = this;
+    editor.editorView.dispatch({
+      selection: {
+        anchor: pos,
+      },
+    });
+    if (center) {
+      editor.editorView.dispatch({
+        effects: [
+          EditorView.scrollIntoView(pos, {
+            y: "center",
+          }),
+        ],
+      });
+    }
+  }
+
+  /**
+   * returns cursor position i.e. begininng of main selection
+   * @returns {number}
+   */
+  getCursor() {
+    let editor = this;
+    return editor.editorView.state.selection.main.from;
+  }
+
+  getSelection() {
+    let editor = this;
+    return editor.editorView.state.selection.main;
+  }
+
+  setSelection(from, to) {
+    let editor = this;
+    const editorView = editor.editorView;
+    editorView.dispatch({
+      selection: {
+        anchor: from,
+        head: to,
+      },
+    });
+  }
+
+  insertAtCursor(text) {
+    let editor = this;
+    const editorView = editor.editorView;
+    const from = editorView.state.selection.main.from;
+    editorView.dispatch({
+      changes: {
+        insert: text,
+        from,
+      },
+      selection: {
+        anchor: from + text.length,
+      },
+    });
+  }
+
   async dispatchAppEvent(name, data) {
     console.log("Editor.dispatchAppEvent:", name, data);
   }
+
   /**
    * @returns {string}
    */
   getText() {
-    let s = this.editorView.state.sliceDoc();
+    let s = this.editorView?.state.sliceDoc();
     return s;
   }
 
@@ -354,5 +496,13 @@ export class Editor {
   }
   focus() {
     focusEditorView(this.editorView);
+  }
+
+  // TODO: not sure if this is the right place for this
+  openUrl(url) {
+    const win = window.open(url, "_blank");
+    if (win) {
+      win.focus();
+    }
   }
 }
