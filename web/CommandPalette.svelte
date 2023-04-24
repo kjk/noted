@@ -10,6 +10,7 @@
   import { scrollintoview } from "./actions/scrollintoview.js";
   import * as keys from "./lib/keys.js";
   import { focus } from "./actions/focus";
+  import browser from "./lib/browser";
 
   export let open = false;
   /** @type {string[]} */
@@ -31,6 +32,11 @@
 
   let searchTerm = "";
   let selectedIdx = 0;
+
+  let createShortcut = "Ctrl + Enter";
+  if (browser.mac) {
+    createShortcut = "⌘ + Enter";
+  }
 
   /** @type {HTMLElement} */
   let inputEl;
@@ -87,19 +93,38 @@
   /**
    * @param {KeyboardEvent} ev
    */
+  function isCreateNoteShortcut(ev) {
+    if (browser.mac) {
+      return ev.metaKey && ev.code === "Enter";
+    }
+    return ev.ctrlKey && ev.code === "Enter";
+  }
+
+  /**
+   * @param {KeyboardEvent} ev
+   */
   function handleKeyDown(ev) {
     // console.log("handleKeyDown", ev.code);
+    if (
+      selectedFrom == kSelectedName &&
+      allowCreateOnEnter &&
+      searchTerm !== "" &&
+      isCreateNoteShortcut(ev)
+    ) {
+      onSelected(selectedFrom, -1, searchTerm);
+      ev.stopPropagation();
+      ev.preventDefault();
+      return;
+    }
+
     if (ev.code === "Enter") {
       const itemIdx = filteredItems[selectedIdx];
       if (typeof itemIdx === "number" && itemIdx >= 0 && itemIdx < len(names)) {
         selectItem(itemIdx);
+        ev.stopPropagation();
+        ev.preventDefault();
         return;
       }
-      if (allowCreateOnEnter && searchTerm !== "") {
-        onSelected(selectedFrom, -1, searchTerm);
-        return;
-      }
-      return;
     }
 
     let dir = 0;
@@ -228,7 +253,7 @@
       <div
         class="flex justify-between text-xs px-2 py-1 bg-gray-50 text-gray-600"
       >
-        <div>Enter: crete <b>{searchTerm}</b> page</div>
+        <div>{createShortcut}: crete <b>{searchTerm}</b> page</div>
       </div>
     {/if}
   </div>
