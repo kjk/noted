@@ -1,18 +1,18 @@
 // TODO: will need to implement methods
 
-import { getNotes, noteGetLastModified } from "../../notesStore";
+import { getNotes, getNotesSync, noteGetLastModified } from "../../notesStore";
 
 import { len } from "../../lib/util";
 import { noteGetTitle } from "../../notesStore";
 
-export class DummySpace {
+export class Space {
   async readPage(name) {
-    console.log("DummySpace.readPage:", name);
+    console.log("Space.readPage:", name);
     return "";
   }
 
   async writePage(name, body) {
-    console.log("DummySpace.writePage:", name);
+    console.log("Space.writePage:", name);
     return {};
   }
   /*
@@ -30,9 +30,8 @@ export class DummySpace {
     return meta;
   }
 
-  async listPages() {
-    console.log("DummySpace.listPages");
-    let notes = await getNotes();
+  listPages() {
+    let notes = getNotesSync();
     let nNotes = len(notes);
     let res = new Array(nNotes);
     for (let i = 0; i < nNotes; i++) {
@@ -40,16 +39,17 @@ export class DummySpace {
       let meta = this.metaForNote(note);
       res[i] = meta;
     }
+    console.log("Space.listPages returning", res.length, "pages");
     return res;
   }
 
   async deletePage(name) {
-    console.log("DummySpace.deletePage:", name);
+    console.log("Space.deletePage:", name);
   }
 
-  async getPageMeta(name) {
-    console.log("DummySpace.getPageMeta:", name);
-    let notes = await getNotes();
+  getPageMeta(name) {
+    console.log("Space.getPageMeta:", name);
+    let notes = getNotesSync();
     for (let note of notes) {
       let title = noteGetTitle(note);
       if (title === name) {
@@ -61,4 +61,4 @@ export class DummySpace {
   }
 }
 
-export default new DummySpace();
+export default new Space();

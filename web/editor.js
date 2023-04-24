@@ -58,6 +58,7 @@ import {
 import { len, throwIf } from "./lib/util.js";
 
 import { SlashCommandHook } from "./hooks/slash_command.js";
+import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
@@ -79,15 +80,6 @@ import { wrapSelection } from "./plugs/core/text.js";
 
 /** @typedef { import("@codemirror/state").Extension} Extension */
 
-class Space {
-  // TODO: implement those functions
-  readAttachment(arg1, arg2) {
-    return "";
-  }
-  listPages() {
-    return [];
-  }
-}
 class PageState {
   constructor(scrollTop, selection) {
     this.scrollTop = scrollTop;

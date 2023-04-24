@@ -175,6 +175,10 @@ class StoreCommon {
     }
   }
 
+  getNotesSync() {
+    return this.notes;
+  }
+
   getTitle(note) {
     let id = note.valueOf();
     let idx = this.notesMap.get(id);
@@ -445,6 +449,10 @@ export function changeToLocalStore() {
 
 export async function getNotes() {
   return store.getNotes();
+}
+
+export function getNotesSync() {
+  return store.getNotesSync();
 }
 
 export async function newNote(title, type = "md") {
