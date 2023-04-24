@@ -338,7 +338,7 @@
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white placeholder:italic"
+      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white placeholder:italic hover:bg-gray-50"
     />
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
