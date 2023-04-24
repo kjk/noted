@@ -154,7 +154,7 @@
     onCommandPaletteSelected = onNoteOrCommandSelected;
     commadnPaletteSearchTerm = "";
     if (startWithCommands) {
-      commadnPaletteSearchTerm = "> ";
+      commadnPaletteSearchTerm = ">";
     }
     showingCommandPalette = true;
   }
