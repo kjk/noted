@@ -55,6 +55,7 @@ import {
   attachmentExtension,
   pasteLinkExtension,
 } from "./cm_plugins/editor_paste.js";
+import { len, throwIf } from "./lib/util.js";
 
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Tag } from "./deps.js";
@@ -68,9 +69,9 @@ import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { noteGetTitle } from "./notesStore.js";
+import { pageComplete } from "./plugs/core/page.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
-import { throwIf } from "./lib/util.js";
 import { unfurlCommand } from "./plugs/core/link.js";
 import { wrapSelection } from "./plugs/core/text.js";
 
@@ -186,6 +187,13 @@ let commands = {
       mac: "Cmd-Shift-u",
       contexts: ["NakedURL"],
     },
+  },
+};
+
+let events = {
+  pageComplete: {
+    path: pageComplete,
+    events: ["editor:complete"],
   },
 };
 
@@ -549,6 +557,7 @@ export class Editor {
       syntaxHighlighting(customMarkdownStyle(this.mdExtensions)),
       autocompletion({
         override: [
+          this.editorComplete.bind(this),
           this.slashCommandHook.slashCommandCompleter.bind(
             this.slashCommandHook
           ),
@@ -696,6 +705,21 @@ export class Editor {
 
   async dispatchAppEvent(name, data) {
     console.log("Editor.dispatchAppEvent:", name, data);
+    let responses = [];
+    for (const [eventName, def] of Object.entries(events)) {
+      let fn = def.path;
+      // throwIf(!fn, `Event ${eventName} not implemented`);
+      let events = def.events;
+      if (events.includes(name)) {
+        let result = await fn(data);
+        if (result) {
+          responses.push(result);
+          console.log("dispatchAppEvent result:", result, "fn:", fn.name);
+        }
+      }
+    }
+    // throw new Error(`Event ${name} not found`);
+    return responses;
   }
 
   /**
@@ -711,6 +735,39 @@ export class Editor {
     let state = this.createEditorState(s, false);
     this.editorView.setState(state);
   }
+
+  async completeWithEvent(context, eventName) {
+    console.log("completeWithEvent eventName:", eventName);
+    const editorState = context.state;
+    const selection = editorState.selection.main;
+    const line = editorState.doc.lineAt(selection.from);
+    const linePrefix = line.text.slice(0, selection.from - line.from);
+    const results = await this.dispatchAppEvent(eventName, {
+      linePrefix,
+      pos: selection.from,
+    });
+    console.log("completeWithEvent results:", results);
+    if (len(results) === 0) {
+      return null;
+    }
+    let actualResult = null;
+    for (const result of results) {
+      if (result) {
+        if (actualResult) {
+          console.error(
+            "Got completion results from multiple sources, cannot deal with that"
+          );
+          return null;
+        }
+        actualResult = result;
+      }
+    }
+    return actualResult;
+  }
+  editorComplete(context) {
+    return this.completeWithEvent(context, "editor:complete");
+  }
+
   focus() {
     focusEditorView(this.editorView);
   }

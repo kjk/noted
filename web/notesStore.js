@@ -174,6 +174,18 @@ class StoreCommon {
       throw new Error(`unknown log op ${op}`);
     }
   }
+
+  getTitle(note) {
+    let id = note.valueOf();
+    let idx = this.notesMap.get(id);
+    return this.notesFlattened[idx + kNoteIdxTitle];
+  }
+
+  getLastModified(note) {
+    let id = note.valueOf();
+    let idx = store.notesMap.get(id);
+    return store.notesFlattened[idx + kNoteIdxUpdatedAt];
+  }
 }
 
 export class StoreLocal extends StoreCommon {
@@ -261,12 +273,6 @@ export class StoreLocal extends StoreCommon {
     let log = mkLogChangeContent(id, contentId);
     await this.kvContent.set(contentId, content);
     await this.appendLog(log);
-  }
-
-  getTitle(note) {
-    let id = note.valueOf();
-    let idx = this.notesMap.get(id);
-    return this.notesFlattened[idx + kNoteIdxTitle];
   }
 
   async setTitle(note, title) {
@@ -472,4 +478,8 @@ export async function noteDelete(note) {
 
 export function noteGetCurrentVersion(note) {
   return store.noteGetCurrentVersion(note);
+}
+
+export function noteGetLastModified(note) {
+  return store.getLastModified(note);
 }

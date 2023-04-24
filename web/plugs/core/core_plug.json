@@ -62,10 +62,6 @@
         "page": ""
       }
     },
-    "pageComplete": {
-      "path": "./page.ts:pageComplete",
-      "events": ["editor:complete"]
-    },
     "commandComplete": {
       "path": "./command.ts:commandComplete",
       "events": ["editor:complete"]

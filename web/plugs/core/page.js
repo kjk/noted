@@ -1,19 +1,21 @@
 import {
+  addParentPointers,
+  collectNodesMatching,
+  renderToText,
+  replaceNodesMatching,
+} from "../../plug-api/lib/tree.js";
+import {
   editor,
   index,
   markdown,
   space,
   system,
-} from "$sb/silverbullet-syscall/mod.js";
-import { events } from "$sb/plugos-syscall/mod.js";
-import {
-  addParentPointers,
-  collectNodesMatching,
-  renderToText,
-  replaceNodesMatching,
-} from "$sb/lib/tree.js";
-import { applyQuery } from "$sb/lib/query.js";
-import { extractFrontmatter } from "$sb/lib/frontmatter.js";
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
+import { applyQuery } from "../../plug-api/lib/query.js";
+import { events } from "../../plug-api/plugos-syscall/mod.js";
+import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+
 export async function indexLinks({ name, tree }) {
   const backLinks = [];
   const pageMeta = extractFrontmatter(tree);
@@ -168,12 +170,15 @@ async function getBackLinks(pageName) {
   }
   return pagesToUpdate;
 }
+
 export async function reindexCommand() {
   await editor.flashNotification("Reindexing...");
   await system.invokeFunction("server", "reindexSpace");
   await editor.flashNotification("Reindexing done");
 }
+
 export async function pageComplete(completeEvent) {
+  console.log("pageComplete:", completeEvent);
   const match = /\[\[([^\]@:]*)$/.exec(completeEvent.linePrefix);
   if (!match) {
     return null;
@@ -188,6 +193,7 @@ export async function pageComplete(completeEvent) {
     })),
   };
 }
+
 export async function reindexSpace() {
   console.log("Clearing page index...");
   await index.clearPageIndex();
@@ -206,9 +212,11 @@ export async function reindexSpace() {
   }
   console.log("Indexing completed!");
 }
+
 export async function clearPageIndex(page) {
   await index.clearPageIndexForPage(page);
 }
+
 export async function parseIndexTextRepublish({ name, text }) {
   console.log("Reindexing", name);
   await events.dispatchEvent("page:index", {
