@@ -171,10 +171,10 @@
    * @param {KeyboardEvent} ev
    */
   function isShowSelectPageOrCommandShortcut(ev) {
-    if (browser.mac && ev.metaKey && ev.key === "k") {
+    if (browser.mac && ev.metaKey && ev.code === "KeyK") {
       return true;
     }
-    if (browser.windows && ev.ctrlKey && ev.key === "k") {
+    if (browser.windows && ev.ctrlKey && ev.code === "KeyK") {
       return true;
     }
     return false;
@@ -187,7 +187,7 @@
     if (browser.mac && ev.altKey && ev.code === "KeyN") {
       return true;
     }
-    if (browser.windows && ev.altKey && ev.key === "n") {
+    if (browser.windows && ev.altKey && ev.code === "KeyN") {
       return true;
     }
     return false;
