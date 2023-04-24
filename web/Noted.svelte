@@ -31,6 +31,7 @@
     kSelectedName,
   } from "./CommandPalette.svelte";
   import browser from "./lib/browser";
+  import { setEditor } from "./plug-api/silverbullet-syscall/mod";
 
   let commandPalettePageNames = [];
   let commandPaletteCommands = ["Delete Note"];
@@ -311,6 +312,7 @@
 
     editor = new Editor(editorElement);
     console.log("editor:", editor);
+    setEditor(editor);
     editor.docChanged = debounce(handleDocChanged, 1000);
     document.addEventListener("keydown", onKeyDown);
 

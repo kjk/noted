@@ -62,6 +62,7 @@ import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
+import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { editorSyscalls } from "./syscalls/editor.js";
 import { embedWidget } from "./plugs/core/embed.js";
@@ -185,6 +186,10 @@ let commands = {
 let events = {
   pageComplete: {
     path: pageComplete,
+    events: ["editor:complete"],
+  },
+  commandComplete: {
+    path: commandComplete,
     events: ["editor:complete"],
   },
 };

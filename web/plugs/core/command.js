@@ -1,4 +1,5 @@
-import { system } from "$sb/silverbullet-syscall/mod.js";
+import { system } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export async function commandComplete(completeEvent) {
   const match = /\{\[([^\]]*)$/.exec(completeEvent.linePrefix);
   if (!match) {
