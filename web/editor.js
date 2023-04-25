@@ -57,7 +57,7 @@ import {
 } from "./cm_plugins/editor_paste.js";
 import { clickNavigate, linkNavigate } from "./plugs/core/navigate.js";
 import { deletePage, pageComplete } from "./plugs/core/page.js";
-import { len, throwIf } from "./lib/util.js";
+import { len, throttle, throwIf } from "./lib/util.js";
 
 import { PathPageNavigator } from "./navigator.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
@@ -369,17 +369,6 @@ export class Editor {
     return false;
   };
 
-  /**
-   * @param {import("@codemirror/state").Transaction} tr
-   */
-  dispatchTransaction(tr) {
-    this.editorView.update([tr]);
-
-    if (tr.docChanged && this.docChanged) {
-      this.docChanged(tr);
-    }
-  }
-
   constructor(editorElement) {
     throwIf(!editorElement);
     this.editorElement = editorElement;
@@ -394,14 +383,17 @@ export class Editor {
       console.log("viewDispatch:", args);
     };
     this.mdExtensions = loadCoreMarkdownExtensions();
+    this.debouncedUpdateEvent = throttle(() => {
+      this.dispatchEvent("editor:updated").catch((e) =>
+        console.error("Error dispatching editor:updated event", e)
+      );
+    }, 1e3);
+
     this.editorCommands = buildEditorCommands(commands);
 
     this.editorView = new EditorView({
       state: this.createEditorState("", false),
       parent: editorElement,
-      dispatch: (tr) => {
-        this.dispatchTransaction(tr);
-      },
     });
 
     this.pageNavigator = new PathPageNavigator(
@@ -760,6 +752,18 @@ export class Editor {
           });
         },
       }),
+      ViewPlugin.fromClass(
+        class {
+          update(update) {
+            if (update.docChanged) {
+              editor.viewDispatch({ type: "page-changed" });
+              editor.debouncedUpdateEvent();
+              editor.docChanged();
+              // editor.save().catch((e) => console.error("Error saving", e));
+            }
+          }
+        }
+      ),
       pasteLinkExtension,
       attachmentExtension(this),
       closeBrackets(),
@@ -864,6 +868,10 @@ export class Editor {
         anchor: from + text.length,
       },
     });
+  }
+
+  async dispatchEvent(name, data) {
+    this.dispatchAppEvent(name, data);
   }
 
   async dispatchAppEvent(name, data) {

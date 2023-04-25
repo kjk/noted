@@ -245,6 +245,41 @@ export function debounce(func, threshold, execAsap = false) {
 }
 
 /**
+ * TODO: should this clear timer? This only delays
+ * @param {Function} func
+ * @param {number} delayMs
+ * @returns {Function}
+ */
+export function throttle(func, delayMs) {
+  let timer = null;
+  return function () {
+    if (!timer) {
+      timer = setTimeout(() => {
+        func();
+        timer = null;
+      }, delayMs);
+    }
+  };
+}
+
+/**
+ * TODO: should this clear timer? This only delays
+ * @param {Function} func
+ * @param {number} delayMs
+ * @returns {Function}
+ */
+export function throttle2(func, delayMs) {
+  let timer = null;
+  return function () {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      func();
+      timer = null;
+    }, delayMs);
+  };
+}
+
+/**
  * @param {boolean} cond
  * @param {string} [msg]
  */

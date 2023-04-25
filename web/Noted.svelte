@@ -366,11 +366,11 @@
     <button
       use:gtooltip={"create new note"}
       on:click={() => createNewNote("")}
-      class="cursor-pointer border-b border-gray-400 text-xl px-2 hover:bg-gray-50"
+      class="cursor-pointer text-xl px-2 hover:bg-gray-50"
     >
       +
     </button>
-    <div class="grow border-b border-gray-400 text-xl">&nbsp;</div>
+    <div class="grow text-xl">&nbsp;</div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
       on:click|preventDefault|stopPropagation={selectPage}
