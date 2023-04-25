@@ -104,7 +104,7 @@ class StoreCommon {
   }
 
   applyLog(log) {
-    console.log("applyLog", log);
+    // console.log("applyLog", log);
     let op = log[0];
     let createdAt = log[1];
     let updatedAt = createdAt;

@@ -265,6 +265,7 @@
    * @param {Note} n
    */
   async function openNote(n) {
+    console.log("openNote:", n, n ? noteGetTitle(n) : "");
     if (note === n) {
       if (n) {
         editor.focus();
@@ -301,6 +302,25 @@
     await setLastNote();
   }
 
+  /**
+   * @param {string} name
+   * @returns {Promise<boolean>} true if state was restored
+   */
+  async function loadNoteByName(name) {
+    // TODO: implement state restoration logic
+    let stateWasRestored = true;
+    console.log("loadNoteByName:", name);
+    let notes = await getNotes();
+    for (let n of notes) {
+      let title = noteGetTitle(n);
+      if (title === name) {
+        await openNote(n);
+        return stateWasRestored;
+      }
+    }
+    return stateWasRestored;
+  }
+
   onMount(async () => {
     console.log("onMount");
     setOnGitHubLogin(doOnGitHubLogin);
@@ -311,6 +331,7 @@
     console.log("notes:", nNotes);
 
     editor = new Editor(editorElement);
+    editor.loadPage = loadNoteByName;
     console.log("editor:", editor);
     setEditor(editor);
     editor.docChanged = debounce(handleDocChanged, 1000);

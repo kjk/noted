@@ -18,6 +18,10 @@ class System {
     }
     return allCommands;
   }
+
+  async invokeCommand(commandName) {
+    console.log("System.invokeCommand:", commandName);
+  }
 }
 
 export let system = new System();

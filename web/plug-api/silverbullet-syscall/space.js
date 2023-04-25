@@ -59,6 +59,11 @@ export class Space {
     }
     return {};
   }
+
+  async readAttachment(name) {
+    console.log("Space.readAttachment:", name);
+    return "";
+  }
 }
 
 export default new Space();

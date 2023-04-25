@@ -1,5 +1,10 @@
 import { Vim, vimGetCm } from "../deps.js";
 
+/**
+ *
+ * @param {import("../editor.js").Editor} editor
+ * @returns
+ */
 export function editorSyscalls(editor) {
   const syscalls = {
     "editor.getCurrentPage": () => {
@@ -31,7 +36,7 @@ export function editorSyscalls(editor) {
       await editor.reloadPage();
     },
     "editor.openUrl": (_ctx, url) => {
-      editor.opoenUrl(url);
+      editor.openUrl(url);
     },
     "editor.downloadFile": (_ctx, filename, dataUrl) => {
       const link = document.createElement("a");

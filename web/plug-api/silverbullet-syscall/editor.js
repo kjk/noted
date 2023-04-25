@@ -2,13 +2,14 @@ let syscalls;
 
 let ctx = "editor.js context";
 
+// TODO: call Editor functions directly
 export function setEdiotrSyscall(c) {
   syscalls = c;
 }
 
 function syscall(name, ...args) {
   let fn = syscalls[name];
-  console.log("syscall:", name, fn);
+  console.log("syscall:", name, fn.name);
   return fn.call(this, ctx, ...args);
 }
 

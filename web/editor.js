@@ -57,12 +57,14 @@ import {
 } from "./cm_plugins/editor_paste.js";
 import { len, throwIf } from "./lib/util.js";
 
+import { PathPageNavigator } from "./navigator.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
 import { anchorComplete } from "./plugs/core/anchor.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
+import { clickNavigate } from "./plugs/core/navigate.js";
 import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { editorSyscalls } from "./syscalls/editor.js";
@@ -79,6 +81,8 @@ import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
 import { tagComplete } from "./plugs/core/tags.js";
 import { unfurlCommand } from "./plugs/core/link.js";
 import { wrapSelection } from "./plugs/core/text.js";
+
+const frontMatterRegex = /^---\n(.*?)---\n/ms;
 
 // import { CodeWidgetHook } from "./hooks/code_widget.js";
 
@@ -206,6 +210,10 @@ let events = {
   emojiCompleter: {
     path: emojiCompleter,
     events: ["editor:complete", "minieditor:complete"],
+  },
+  clickNavigate: {
+    path: clickNavigate,
+    events: ["page:click"],
   },
 };
 
@@ -341,6 +349,9 @@ export class Editor {
   viewDispatch;
   currentNote;
   editorCommands;
+  loadPage = async (pageName) => {
+    return false;
+  };
 
   /**
    * @param {import("@codemirror/state").Transaction} tr
@@ -377,9 +388,45 @@ export class Editor {
       },
     });
 
+    this.pageNavigator = new PathPageNavigator(
+      "", // indexPage
+      "" // urlPrefix
+    );
+
+    this.pageNavigator.subscribe(async (pageName, pos) => {
+      console.log("Now navigating to", pageName);
+      if (!this.editorView) {
+        return;
+      }
+      const stateRestored = await this.loadPage(pageName);
+    });
+
     // TODO: long term we want to undo this redirection
     let syscall = editorSyscalls(this);
     setEdiotrSyscall(syscall);
+  }
+
+  async reloadPage() {
+    console.log("Editor.reloadPage");
+    // TODO: implement me
+  }
+
+  async navigate(name, pos, replaceState = false, newWindow = false) {
+    console.log("Editor.navigate:", name, pos, replaceState, newWindow);
+    // TODO: we don't have indexPage
+    // if (!name) {
+    //   name = this.indexPage;
+    // }
+
+    if (newWindow) {
+      const win = window.open(`${location.origin}/${name}`, "_blank");
+      if (win) {
+        win.focus();
+      }
+      return;
+    }
+
+    await this.pageNavigator.navigate(name, pos, replaceState);
   }
 
   get currentPage() {

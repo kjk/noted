@@ -173,7 +173,7 @@ async function getBackLinks(pageName) {
 
 export async function reindexCommand() {
   await editor.flashNotification("Reindexing...");
-  await system.invokeFunction("server", "reindexSpace");
+  // await system.invokeFunction("server", "reindexSpace");
   await editor.flashNotification("Reindexing done");
 }
 

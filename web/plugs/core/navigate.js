@@ -10,6 +10,7 @@ import {
   space,
   system,
 } from "../../plug-api/silverbullet-syscall/mod.js";
+
 async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
   if (!mdTree) {
     return;
@@ -92,6 +93,7 @@ export async function linkNavigate() {
   addParentPointers(mdTree);
   await actionClickOrActionEnter(newNode);
 }
+
 export async function clickNavigate(event) {
   if (event.altKey) {
     return;
@@ -101,6 +103,7 @@ export async function clickNavigate(event) {
   const newNode = nodeAtPos(mdTree, event.pos);
   await actionClickOrActionEnter(newNode, event.ctrlKey || event.metaKey);
 }
+
 export async function navigateCommand(cmdDef) {
   await editor.navigate(cmdDef.page);
 }

@@ -78,10 +78,7 @@
         "mac": "Cmd-Enter"
       }
     },
-    "clickNavigate": {
-      "path": "./navigate.ts:clickNavigate",
-      "events": ["page:click"]
-    },
+
     "navigateHome": {
       "path": "./navigate.ts:navigateCommand",
       "command": {
