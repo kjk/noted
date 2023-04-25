@@ -1,4 +1,7 @@
-import { clientStore, editor } from "$sb/silverbullet-syscall/mod.js";
+import {
+  clientStore,
+  editor,
+} from "../../plug-api/silverbullet-syscall/mod.js";
 export async function setEditorMode() {
   if (await clientStore.get("vimMode")) {
     await editor.setUiOption("vimMode", true);

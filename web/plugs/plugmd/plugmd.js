@@ -1,12 +1,15 @@
-import { collectNodesOfType, findNodeOfType } from "$sb/lib/tree.js";
+import * as YAML from "yaml";
+
+import { collectNodesOfType, findNodeOfType } from "../../plug-api/lib/tree.js";
 import {
   editor,
   markdown,
   space,
   system,
-} from "$sb/silverbullet-syscall/mod.js";
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { syscall } from "$sb/plugos-syscall/mod.js";
-import * as YAML from "yaml";
+
 export async function compileCommand() {
   const text = await editor.getText();
   try {

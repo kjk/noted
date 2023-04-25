@@ -1,6 +1,8 @@
-import { index } from "$sb/silverbullet-syscall/mod.js";
-import { collectNodesOfType, renderToText } from "$sb/lib/tree.js";
-import { applyQuery, removeQueries } from "$sb/lib/query.js";
+import { applyQuery, removeQueries } from "../../plug-api/lib/query.js";
+import { collectNodesOfType, renderToText } from "../../plug-api/lib/tree.js";
+
+import { index } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export async function indexItems({ name, tree }) {
   const items = [];
   removeQueries(tree);

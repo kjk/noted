@@ -1,4 +1,5 @@
-import { markdown, space } from "$sb/silverbullet-syscall/mod.js";
+import { markdown, space } from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { LocalFileSystem } from "$sb/plugos-syscall/mod.js";
 import { asset } from "$sb/plugos-syscall/mod.js";
 import { renderMarkdownToHtml } from "./markdown_render.js";

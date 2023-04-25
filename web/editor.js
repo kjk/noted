@@ -60,12 +60,14 @@ import { len, throwIf } from "./lib/util.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
+import { anchorComplete } from "./plugs/core/anchor.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
 import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { editorSyscalls } from "./syscalls/editor.js";
 import { embedWidget } from "./plugs/core/embed.js";
+import { emojiCompleter } from "./plugs/emoji/emoji.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
@@ -196,6 +198,14 @@ let events = {
   tagComplete: {
     path: tagComplete,
     events: ["editor:complete"],
+  },
+  anchorComplete: {
+    path: anchorComplete,
+    events: ["editor:complete"],
+  },
+  emojiCompleter: {
+    path: emojiCompleter,
+    events: ["editor:complete", "minieditor:complete"],
   },
 };
 

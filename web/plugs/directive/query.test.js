@@ -1,9 +1,10 @@
+import { findNodeOfType, renderToText } from "../../plug-api/lib/tree.js";
+
+import { applyQuery } from "../../plug-api/lib/query.js";
 import { assertEquals } from "../../test_deps.js";
-import { applyQuery } from "$sb/lib/query.js";
-import wikiMarkdownLang from "../../common/markdown_parser/parser.js";
 import { parse } from "../../common/markdown_parser/parse_tree.js";
 import { parseQuery as parseQueryQuery } from "./parser.js";
-import { findNodeOfType, renderToText } from "../../plug-api/lib/tree.js";
+import wikiMarkdownLang from "../../common/markdown_parser/parser.js";
 function parseQuery(query) {
   const lang = wikiMarkdownLang([]);
   const mdTree = parse(

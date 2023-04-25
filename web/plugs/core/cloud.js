@@ -1,6 +1,8 @@
-import { renderToText, replaceNodesMatching } from "$sb/lib/tree.js";
-import { parseMarkdown } from "$sb/silverbullet-syscall/markdown.js";
+import { renderToText, replaceNodesMatching } from "../../plug-api/lib/tree.js";
+
 import { base64EncodedDataUrl } from "../../plugos/asset_bundle/base64.js";
+import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
+
 export const cloudPrefix = "\u{1F4AD} ";
 export async function readFileCloud(name, encoding) {
   const originalUrl = name.substring(

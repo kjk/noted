@@ -1,11 +1,17 @@
-import { editor, markdown, system } from "$sb/silverbullet-syscall/mod.js";
+import {
+  editor,
+  markdown,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
 import {
   removeParentPointers,
   renderToText,
   traverseTree,
-} from "$sb/lib/tree.js";
+} from "../../plug-api/lib/tree.js";
+
+import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
 import { renderDirectives } from "./directives.js";
-import { extractFrontmatter } from "$sb/lib/frontmatter.js";
+
 export async function updateDirectivesOnPageCommand(arg) {
   const explicitCall = typeof arg !== "string";
   const pageName = await editor.getCurrentPage();

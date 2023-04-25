@@ -1,6 +1,12 @@
+import {
+  editor,
+  markdown,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { events } from "$sb/plugos-syscall/mod.js";
-import { editor, markdown, system } from "$sb/silverbullet-syscall/mod.js";
-import { extractFrontmatter } from "$sb/lib/frontmatter.js";
+import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+
 export async function publishCommand() {
   await editor.save();
   const text = await editor.getText();

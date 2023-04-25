@@ -2,8 +2,10 @@ import {
   findNodeOfType,
   renderToText,
   replaceNodesMatching,
-} from "$sb/lib/tree.js";
-import { markdown } from "$sb/silverbullet-syscall/mod.js";
+} from "../../plug-api/lib/tree.js";
+
+import { markdown } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export function encodePageUrl(name) {
   return name.replaceAll(" ", "_");
 }

@@ -1,10 +1,11 @@
-import { renderToText } from "$sb/lib/tree.js";
-import { evalDirectiveRenderer } from "./eval_directive.js";
-import { queryDirectiveRenderer } from "./query_directive.js";
 import {
   cleanTemplateInstantiations,
   templateDirectiveRenderer,
 } from "./template_directive.js";
+
+import { evalDirectiveRenderer } from "./eval_directive.js";
+import { queryDirectiveRenderer } from "./query_directive.js";
+import { renderToText } from "../../plug-api/lib/tree.js";
 export const directiveStartRegex =
   /<!--\s*#(use|use-verbose|include|eval|query)\s+(.*?)-->/i;
 export const directiveRegex =

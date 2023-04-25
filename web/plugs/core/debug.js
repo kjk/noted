@@ -1,4 +1,4 @@
-import { editor, markdown } from "$sb/silverbullet-syscall/mod.js";
+import { editor, markdown } from "../../plug-api/silverbullet-syscall/mod.js";
 export async function parsePageCommand() {
   console.log(
     "AST",

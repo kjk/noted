@@ -1,5 +1,10 @@
+import {
+  editor,
+  space,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { events } from "$sb/plugos-syscall/mod.js";
-import { editor, space, system } from "$sb/silverbullet-syscall/mod.js";
 import { readYamlPage } from "$sb/lib/yaml_page.js";
 const plugsPrelude =
   "This file lists all plugs that SilverBullet will load. Run the {[Plugs: Update]} command to update and reload this list of plugs.\n\n";

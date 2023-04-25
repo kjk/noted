@@ -1,6 +1,12 @@
-import { store } from "$sb/plugos-syscall/mod.js";
-import { editor, space, sync, system } from "$sb/silverbullet-syscall/mod.js";
+import {
+  editor,
+  space,
+  sync,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { readSetting } from "$sb/lib/settings_page.js";
+import { store } from "$sb/plugos-syscall/mod.js";
 export async function configureCommand() {
   const url = await editor.prompt(
     "Enter the URL of the remote space to sync with",

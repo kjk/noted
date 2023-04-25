@@ -1,0 +1,69 @@
+{
+  "name": "directive",
+  "imports": ["https://get.silverbullet.md/global.plug.json"],
+  "functions": {
+    "serverRenderDirective": {
+      "path": "./command.ts:serverRenderDirective"
+    },
+    "updateDirectivesOnPageCommand": {
+      "path": "./command.ts:updateDirectivesOnPageCommand",
+      "command": {
+        "name": "Directives: Update",
+        "key": "Alt-q"
+      },
+      "events": ["editor:pageLoaded"]
+    },
+    "indexData": {
+      "path": "./data.ts:indexData",
+      "events": ["page:index"]
+    },
+    "dataQueryProvider": {
+      "path": "./data.ts:queryProvider",
+      "events": ["query:data"]
+    },
+    "queryComplete": {
+      "path": "./complete.ts:queryComplete",
+      "events": ["editor:complete"]
+    },
+    "insertQuery": {
+      "redirect": "core.insertTemplateText",
+      "slashCommand": {
+        "name": "query",
+        "description": "Insert a query",
+        "value": "<!-- #query |^| -->\n\n<!-- /query -->\n"
+      }
+    },
+    "insertInclude": {
+      "redirect": "core.insertTemplateText",
+      "slashCommand": {
+        "name": "include",
+        "description": "Include another page",
+        "value": "<!-- #include [[|^|]] -->\n\n<!-- /include -->\n"
+      }
+    },
+    "insertUseTemplate": {
+      "redirect": "core.insertTemplateText",
+      "slashCommand": {
+        "name": "use",
+        "description": "Use a template",
+        "value": "<!-- #use [[|^|]] {} -->\n\n<!-- /use -->\n"
+      }
+    },
+    "insertUseVerboseTemplate": {
+      "redirect": "core.insertTemplateText",
+      "slashCommand": {
+        "name": "use-verbose",
+        "description": "Use a template (verbose mode)",
+        "value": "<!-- #use-verbose [[|^|]] {} -->\n\n<!-- /use-verbose -->\n"
+      }
+    },
+    "insertEvalTemplate": {
+      "redirect": "core.insertTemplateText",
+      "slashCommand": {
+        "name": "eval",
+        "description": "Evaluate a JavaScript expression",
+        "value": "<!-- #eval |^| -->\n\n<!-- /eval -->\n"
+      }
+    }
+  }
+}

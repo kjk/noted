@@ -102,10 +102,7 @@
       "path": "./anchor.ts:indexAnchors",
       "events": ["page:index"]
     },
-    "anchorComplete": {
-      "path": "./anchor.ts:anchorComplete",
-      "events": ["editor:complete"]
-    },
+
     "searchIndex": {
       "path": "./search.ts:pageIndex",
       "events": ["page:index"]

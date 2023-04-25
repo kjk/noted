@@ -1,6 +1,8 @@
-import { collectNodesOfType } from "$sb/lib/tree.js";
-import { editor, index } from "$sb/silverbullet-syscall/mod.js";
-import { removeQueries } from "$sb/lib/query.js";
+import { editor, index } from "../../plug-api/silverbullet-syscall/mod.js";
+
+import { collectNodesOfType } from "../../plug-api/lib/tree.js";
+import { removeQueries } from "../../plug-api/lib/query.js";
+
 export async function indexAnchors({ name: pageName, tree }) {
   removeQueries(tree);
   const anchors = [];
@@ -13,6 +15,7 @@ export async function indexAnchors({ name: pageName, tree }) {
   });
   await index.batchSet(pageName, anchors);
 }
+
 export async function anchorComplete(completeEvent) {
   const match = /\[\[([^\]@:]*@[\w\.\-\/]*)$/.exec(completeEvent.linePrefix);
   if (!match) {

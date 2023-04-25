@@ -1,7 +1,8 @@
-import Handlebars from "handlebars";
 import * as YAML from "yaml";
-import { space } from "$sb/silverbullet-syscall/mod.js";
+
+import Handlebars from "handlebars";
 import { niceDate } from "$sb/lib/dates.js";
+import { space } from "../../plug-api/silverbullet-syscall/mod.js";
 const maxWidth = 70;
 export function defaultJsonTransformer(_k, v) {
   if (v === void 0) {

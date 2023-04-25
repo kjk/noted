@@ -1,15 +1,15 @@
 import {
-  editor,
-  markdown,
-  space,
-  system,
-} from "$sb/silverbullet-syscall/mod.js";
-import {
   addParentPointers,
   findNodeOfType,
   findParentMatching,
   nodeAtPos,
-} from "$sb/lib/tree.js";
+} from "../../plug-api/lib/tree.js";
+import {
+  editor,
+  markdown,
+  space,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
 async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
   if (!mdTree) {
     return;

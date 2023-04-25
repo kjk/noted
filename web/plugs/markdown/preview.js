@@ -3,7 +3,8 @@ import {
   editor,
   space,
   system,
-} from "$sb/silverbullet-syscall/mod.js";
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { asset } from "$sb/plugos-syscall/mod.js";
 import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
 import { renderMarkdownToHtml } from "./markdown_render.js";

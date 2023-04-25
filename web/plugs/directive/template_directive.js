@@ -1,12 +1,14 @@
-import { queryRegex } from "$sb/lib/query.js";
-import { renderToText } from "$sb/lib/tree.js";
-import { replaceAsync } from "$sb/lib/util.js";
-import { markdown, space } from "$sb/silverbullet-syscall/mod.js";
+import { markdown, space } from "../../plug-api/silverbullet-syscall/mod.js";
+
 import Handlebars from "handlebars";
-import { replaceTemplateVars } from "../core/template.js";
-import { extractFrontmatter } from "$sb/lib/frontmatter.js";
 import { directiveRegex } from "./directives.js";
+import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+import { queryRegex } from "../../plug-api/lib/query.js";
+import { renderToText } from "../../plug-api/lib/tree.js";
+import { replaceAsync } from "$sb/lib/util.js";
+import { replaceTemplateVars } from "../core/template.js";
 import { serverUpdateDirectives } from "./command.js";
+
 const templateRegex = /\[\[([^\]]+)\]\]\s*(.*)\s*/;
 export async function templateDirectiveRenderer(directive, pageName, arg) {
   if (typeof arg !== "string") {

@@ -1,23 +1,26 @@
-import {
-  findNodeOfType,
-  removeParentPointers,
-  renderToText,
-} from "$sb/lib/tree.js";
-import { getText } from "$sb/silverbullet-syscall/editor.js";
-import { parseMarkdown } from "$sb/silverbullet-syscall/markdown.js";
-import {
-  extractFrontmatter,
-  prepareFrontmatterDispatch,
-} from "$sb/lib/frontmatter.js";
 import * as YAML from "yaml";
+
 import {
   clientStore,
   collab,
   editor,
   markdown,
-} from "$sb/silverbullet-syscall/mod.js";
-import { nanoid } from "https://esm.sh/nanoid@4.0.0";
+} from "../../plug-api/silverbullet-syscall/mod.js";
+import {
+  extractFrontmatter,
+  prepareFrontmatterDispatch,
+} from "../../plug-api/lib/frontmatter.js";
+import {
+  findNodeOfType,
+  removeParentPointers,
+  renderToText,
+} from "../../plug-api/lib/tree.js";
+
 import { base64EncodedDataUrl } from "../../plugos/asset_bundle/base64.js";
+import { getText } from "../../plug-api/silverbullet-syscall/editor.js";
+import { nanoid } from "https://esm.sh/nanoid@4.0.0";
+import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
+
 const defaultServer = "wss://collab.silverbullet.md";
 async function ensureUsername() {
   let username = await clientStore.get("collabUsername");

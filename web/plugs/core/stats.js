@@ -1,4 +1,4 @@
-import { editor, space } from "$sb/silverbullet-syscall/mod.js";
+import { editor, space } from "../../plug-api/silverbullet-syscall/mod.js";
 function countWords(str) {
   const matches = str.match(/[\w\d\'-]+/gi);
   return matches ? matches.length : 0;

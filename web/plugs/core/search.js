@@ -1,8 +1,10 @@
-import { fulltext } from "$sb/plugos-syscall/mod.js";
-import { renderToText } from "$sb/lib/tree.js";
-import { editor, index } from "$sb/silverbullet-syscall/mod.js";
-import { applyQuery, removeQueries } from "$sb/lib/query.js";
+import { applyQuery, removeQueries } from "../../plug-api/lib/query.js";
+import { editor, index } from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { base64EncodedDataUrl } from "../../plugos/asset_bundle/base64.js";
+import { fulltext } from "$sb/plugos-syscall/mod.js";
+import { renderToText } from "../../plug-api/lib/tree.js";
+
 const searchPrefix = "\u{1F50D} ";
 export async function pageIndex(data) {
   removeQueries(data.tree);

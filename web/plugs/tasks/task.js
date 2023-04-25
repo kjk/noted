@@ -1,10 +1,4 @@
 import {
-  editor,
-  index,
-  markdown,
-  space,
-} from "$sb/silverbullet-syscall/mod.js";
-import {
   addParentPointers,
   collectNodesMatching,
   collectNodesOfType,
@@ -12,9 +6,17 @@ import {
   nodeAtPos,
   renderToText,
   replaceNodesMatching,
-} from "$sb/lib/tree.js";
-import { applyQuery, removeQueries } from "$sb/lib/query.js";
+} from "../../plug-api/lib/tree.js";
+import { applyQuery, removeQueries } from "../../plug-api/lib/query.js";
+import {
+  editor,
+  index,
+  markdown,
+  space,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { niceDate } from "$sb/lib/dates.js";
+
 function getDeadline(deadlineNode) {
   return deadlineNode.children[0].text.replace(/📅\s*/, "");
 }

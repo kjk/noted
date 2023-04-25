@@ -1,4 +1,9 @@
-import { clientStore, editor, system } from "$sb/silverbullet-syscall/mod.js";
+import {
+  clientStore,
+  editor,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+
 import { readSettings } from "$sb/lib/settings_page.js";
 export async function togglePreview() {
   const currentValue = !!(await clientStore.get("enableMarkdownPreview"));
