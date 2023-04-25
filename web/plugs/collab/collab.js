@@ -18,7 +18,7 @@ import {
 
 import { base64EncodedDataUrl } from "../../plugos/asset_bundle/base64.js";
 import { getText } from "../../plug-api/silverbullet-syscall/editor.js";
-import { nanoid } from "https://esm.sh/nanoid@4.0.0";
+import { nanoid } from "../../lib/nanoid.js";
 import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
 
 const defaultServer = "wss://collab.silverbullet.md";
