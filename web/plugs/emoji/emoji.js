@@ -1,4 +1,6 @@
-import emojis from "./emoji.json" assert { type: "json" };
+import { len } from "../../lib/util";
+/** @type {string[]} */
+import emojis from "./emoji-opt.json" assert { type: "json" };
 
 export function emojiCompleter({ linePrefix, pos }) {
   const match = /:([\w]+)$/.exec(linePrefix);
@@ -6,16 +8,26 @@ export function emojiCompleter({ linePrefix, pos }) {
     return null;
   }
   const [fullMatch, emojiName] = match;
-  const filteredEmoji = emojis.filter(([_, shortcode]) =>
-    shortcode.includes(emojiName)
-  );
+
+  let options = [];
+  let n = len(emojis) / 2;
+  for (let i = 0; i < n; i++) {
+    let emoji = emojis[i * 2];
+    let shortcode = emojis[i * 2 + 1];
+    // @ts-ignore
+    if (shortcode.includes(emojiName)) {
+      let opt = {
+        detail: shortcode,
+        label: emoji,
+        type: "emoji",
+      };
+      options.push(opt);
+    }
+  }
+
   return {
     from: pos - fullMatch.length,
     filter: false,
-    options: filteredEmoji.map(([emoji, shortcode]) => ({
-      detail: shortcode,
-      label: emoji,
-      type: "emoji",
-    })),
+    options: options,
   };
 }
