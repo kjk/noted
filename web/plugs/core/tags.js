@@ -1,7 +1,9 @@
-import { collectNodesOfType } from "$sb/lib/tree.js";
-import { index } from "$sb/silverbullet-syscall/mod.js";
-import { applyQuery, removeQueries } from "$sb/lib/query.js";
+import { applyQuery, removeQueries } from "../../plug-api/lib/query.js";
+
+import { collectNodesOfType } from "../../plug-api/lib/tree.js";
 import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+import { index } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export async function indexTags({ name, tree }) {
   removeQueries(tree);
   const allTags = /* @__PURE__ */ new Set();

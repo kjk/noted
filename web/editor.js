@@ -74,6 +74,7 @@ import { noteGetTitle } from "./notesStore.js";
 import { pageComplete } from "./plugs/core/page.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
+import { tagComplete } from "./plugs/core/tags.js";
 import { unfurlCommand } from "./plugs/core/link.js";
 import { wrapSelection } from "./plugs/core/text.js";
 
@@ -190,6 +191,10 @@ let events = {
   },
   commandComplete: {
     path: commandComplete,
+    events: ["editor:complete"],
+  },
+  tagComplete: {
+    path: tagComplete,
     events: ["editor:complete"],
   },
 };

@@ -94,10 +94,6 @@
       "path": "./tags.ts:indexTags",
       "events": ["page:index"]
     },
-    "tagComplete": {
-      "path": "./tags.ts:tagComplete",
-      "events": ["editor:complete"]
-    },
     "tagProvider": {
       "path": "./tags.ts:tagProvider",
       "events": ["query:tag"]
