@@ -60,7 +60,7 @@ const kNoteFieldsCount = 7;
 // folllowed by data for for a given kind of log entry
 // for notes, the first elment of data is note id
 function mkLogCreateNote(title, kind, isDaily = false) {
-  let id = genRandomNoteID(8);
+  let id = genRandomNoteID();
   return [kLogCreateNote, Date.now(), id, title, kind, isDaily];
 }
 
