@@ -87,8 +87,10 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
     }
   }
 }
+
 export async function linkNavigate() {
-  const mdTree = await markdown.parseMarkdown(await editor.getText());
+  let s = await editor.getText();
+  const mdTree = await markdown.parseMarkdown(s);
   const newNode = nodeAtPos(mdTree, await editor.getCursor());
   addParentPointers(mdTree);
   await actionClickOrActionEnter(newNode);
@@ -98,7 +100,8 @@ export async function clickNavigate(event) {
   if (event.altKey) {
     return;
   }
-  const mdTree = await markdown.parseMarkdown(await editor.getText());
+  let s = await editor.getText();
+  const mdTree = await markdown.parseMarkdown(s);
   addParentPointers(mdTree);
   const newNode = nodeAtPos(mdTree, event.pos);
   await actionClickOrActionEnter(newNode, event.ctrlKey || event.metaKey);

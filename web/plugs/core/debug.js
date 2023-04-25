@@ -1,14 +1,10 @@
 import { editor, markdown } from "../../plug-api/silverbullet-syscall/mod.js";
+
 export async function parsePageCommand() {
-  console.log(
-    "AST",
-    JSON.stringify(
-      await markdown.parseMarkdown(await editor.getText()),
-      null,
-      2
-    )
-  );
+  let s = await editor.getText();
+  console.log("AST", JSON.stringify(await markdown.parseMarkdown(s), null, 2));
 }
+
 export async function showLogsCommand() {
   await editor.showPanel(
     "bhs",

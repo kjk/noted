@@ -11,8 +11,8 @@ export function lezerToParseTree(text, n, offset = 0) {
       {
         from: n.from + offset,
         to: n.to + offset,
-        text: text.substring(n.from, n.to)
-      }
+        text: text.substring(n.from, n.to),
+      },
     ];
   } else {
     const newChildren = [];
@@ -23,7 +23,7 @@ export function lezerToParseTree(text, n, offset = 0) {
         newChildren.push({
           from: index + offset,
           to: child2.from + offset,
-          text: s2
+          text: s2,
         });
       }
       newChildren.push(child2);
@@ -38,7 +38,7 @@ export function lezerToParseTree(text, n, offset = 0) {
   const result = {
     type: n.name,
     from: n.from + offset,
-    to: n.to + offset
+    to: n.to + offset,
   };
   if (children.length > 0) {
     result.children = children;
@@ -48,6 +48,7 @@ export function lezerToParseTree(text, n, offset = 0) {
   }
   return result;
 }
+
 export function parse(language, text) {
   text = text.replaceAll("\r", "");
   const tree = lezerToParseTree(text, language.parser.parse(text).topNode);

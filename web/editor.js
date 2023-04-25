@@ -76,7 +76,9 @@ import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { noteGetTitle } from "./notesStore.js";
 import { pageComplete } from "./plugs/core/page.js";
+import { safeRun } from "./plugos/util.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
+import { setMarkdownLang } from "./plug-api/silverbullet-syscall/markdown.js";
 import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
 import { tagComplete } from "./plugs/core/tags.js";
 import { unfurlCommand } from "./plugs/core/link.js";
@@ -429,6 +431,10 @@ export class Editor {
     await this.pageNavigator.navigate(name, pos, replaceState);
   }
 
+  get pageName() {
+    return this.currentPage;
+  }
+
   get currentPage() {
     let title = "";
     if (this.currentNote) {
@@ -445,7 +451,9 @@ export class Editor {
    */
   createEditorState(text, readOnly) {
     let editor = this;
+    let touchCount = 0;
     const commandKeyBindings = [];
+    let pageName = this.pageName;
     for (const def of this.editorCommands.values()) {
       if (def.command.key) {
         commandKeyBindings.push({
@@ -479,6 +487,9 @@ export class Editor {
 
     let tabSize = 4;
 
+    let markdownLang = buildMarkdown(this.mdExtensions);
+    setMarkdownLang(markdownLang);
+
     /** @type {Extension[]}*/
     const exts = [
       indentUnit.of(" ".repeat(tabSize)),
@@ -487,7 +498,7 @@ export class Editor {
       keymap.of([indentWithTab]),
 
       markdown({
-        base: buildMarkdown(this.mdExtensions),
+        base: markdownLang,
         codeLanguages: [
           LanguageDescription.of({
             name: "yaml",
@@ -655,7 +666,86 @@ export class Editor {
         ...completionKeymap,
         indentWithTab,
         ...commandKeyBindings,
+        // TODO: use this instead of my global keyboard handler to trigger command palette
+        // {
+        //   key: "Ctrl-k",
+        //   mac: "Cmd-k",
+        //   run: () => {
+        //     this.viewDispatch({ type: "start-navigate" });
+        //     this.space.updatePageList();
+        //     return true;
+        //   },
+        // },
+        // {
+        //   key: "Ctrl-/",
+        //   mac: "Cmd-/",
+        //   run: () => {
+        //     this.viewDispatch({
+        //       type: "show-palette",
+        //       context: this.getContext(),
+        //     });
+        //     return true;
+        //   },
+        // },
       ]),
+      EditorView.domEventHandlers({
+        touchmove: (event, view) => {
+          touchCount++;
+        },
+        touchend: (event, view) => {
+          if (touchCount === 0) {
+            safeRun(async () => {
+              const touch = event.changedTouches.item(0);
+              const clickEvent = {
+                page: pageName,
+                ctrlKey: event.ctrlKey,
+                metaKey: event.metaKey,
+                altKey: event.altKey,
+                pos: view.posAtCoords({
+                  x: touch.clientX,
+                  y: touch.clientY,
+                }),
+              };
+              await this.dispatchAppEvent("page:click", clickEvent);
+            });
+          }
+          touchCount = 0;
+        },
+        mousedown: (event, view) => {
+          if (!event.altKey && event.target instanceof Element) {
+            const parentA = event.target.closest("a");
+            if (parentA) {
+              event.stopPropagation();
+              event.preventDefault();
+              const clickEvent = {
+                page: pageName,
+                ctrlKey: event.ctrlKey,
+                metaKey: event.metaKey,
+                altKey: event.altKey,
+                pos: view.posAtCoords({
+                  x: event.x,
+                  y: event.y,
+                }),
+              };
+              this.dispatchAppEvent("page:click", clickEvent).catch(
+                console.error
+              );
+            }
+          }
+        },
+        click: (event, view) => {
+          safeRun(async () => {
+            const clickEvent = {
+              page: pageName,
+              ctrlKey: event.ctrlKey,
+              metaKey: event.metaKey,
+              altKey: event.altKey,
+              pos: view.posAtCoords(event),
+            };
+            await this.dispatchAppEvent("page:click", clickEvent);
+          });
+        },
+      }),
       pasteLinkExtension,
       attachmentExtension(this),
       closeBrackets(),
