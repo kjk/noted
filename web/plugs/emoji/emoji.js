@@ -1,6 +1,6 @@
-import { len } from "../../lib/util";
 /** @type {string[]} */
-import emojis from "./emoji-opt.json" assert { type: "json" };
+import { emojis } from "./emoji-opt";
+import { len } from "../../lib/util";
 
 export function emojiCompleter({ linePrefix, pos }) {
   const match = /:([\w]+)$/.exec(linePrefix);

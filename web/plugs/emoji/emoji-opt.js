@@ -1,4 +1,4 @@
-[
+export let emojis = [
 "😀", "grinning_face",
 "😃", "grinning_face_with_big_eyes",
 "😄", "grinning_face_with_smiling_eyes",
@@ -4699,5 +4699,5 @@
 "🇿🇼", "flag_zimbabwe",
 "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "flag_england",
 "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "flag_scotland",
-"🏴󠁧󠁢󠁷󠁬󠁳󠁿", "flag_wales",
+"🏴󠁧󠁢󠁷󠁬󠁳󠁿", "flag_wales"
 ];

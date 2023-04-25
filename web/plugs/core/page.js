@@ -52,20 +52,24 @@ export async function linkQueryProvider({ query, pageName }) {
   }
   return applyQuery(query, links);
 }
+
 export async function deletePage() {
-  const pageName = await editor.getCurrentPage();
-  if (
-    !(await editor.confirm(
-      `Are you sure you would like to delete ${pageName}?`
-    ))
-  ) {
-    return;
-  }
-  console.log("Navigating to index page");
-  await editor.navigate("");
-  console.log("Deleting page from space");
-  await space.deletePage(pageName);
+  console.log("deletePage");
+  // TODO: implement me
+  // const pageName = await editor.getCurrentPage();
+  // if (
+  //   !(await editor.confirm(
+  //     `Are you sure you would like to delete ${pageName}?`
+  //   ))
+  // ) {
+  //   return;
+  // }
+  // console.log("Navigating to index page");
+  // await editor.navigate("");
+  // console.log("Deleting page from space");
+  // await space.deletePage(pageName);
 }
+
 export async function renamePage(cmdDef) {
   console.log("Got a target name", cmdDef.page);
   const oldName = await editor.getCurrentPage();

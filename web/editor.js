@@ -55,6 +55,8 @@ import {
   attachmentExtension,
   pasteLinkExtension,
 } from "./cm_plugins/editor_paste.js";
+import { clickNavigate, linkNavigate } from "./plugs/core/navigate.js";
+import { deletePage, pageComplete } from "./plugs/core/page.js";
 import { len, throwIf } from "./lib/util.js";
 
 import { PathPageNavigator } from "./navigator.js";
@@ -64,7 +66,6 @@ import { Tag } from "./deps.js";
 import { anchorComplete } from "./plugs/core/anchor.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
-import { clickNavigate } from "./plugs/core/navigate.js";
 import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { editorSyscalls } from "./syscalls/editor.js";
@@ -75,7 +76,6 @@ import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { noteGetTitle } from "./notesStore.js";
-import { pageComplete } from "./plugs/core/page.js";
 import { safeRun } from "./plugos/util.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { setMarkdownLang } from "./plug-api/silverbullet-syscall/markdown.js";
@@ -188,6 +188,20 @@ let commands = {
       key: "Ctrl-Shift-u",
       mac: "Cmd-Shift-u",
       contexts: ["NakedURL"],
+    },
+  },
+  linkNavigate: {
+    path: linkNavigate,
+    command: {
+      name: "Navigate To page",
+      key: "Ctrl-Enter",
+      mac: "Cmd-Enter",
+    },
+  },
+  deletePage: {
+    path: deletePage,
+    command: {
+      name: "Page: Delete",
     },
   },
 };

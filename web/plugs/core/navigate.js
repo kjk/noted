@@ -11,27 +11,29 @@ import {
   system,
 } from "../../plug-api/silverbullet-syscall/mod.js";
 
+const navigationNodeFinder = (t) =>
+  [
+    "WikiLink",
+    "Link",
+    "Image",
+    "URL",
+    "NakedURL",
+    "Link",
+    "CommandLink",
+    "PageRef",
+  ].includes(t.type);
+
 async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
   if (!mdTree) {
     return;
   }
-  const navigationNodeFinder = (t) =>
-    [
-      "WikiLink",
-      "Link",
-      "Image",
-      "URL",
-      "NakedURL",
-      "Link",
-      "CommandLink",
-      "PageRef",
-    ].includes(t.type);
   if (!navigationNodeFinder(mdTree)) {
     mdTree = findParentMatching(mdTree, navigationNodeFinder);
     if (!mdTree) {
       return;
     }
   }
+
   switch (mdTree.type) {
     case "WikiLink": {
       let pageLink = mdTree.children[1].children[0].text;
@@ -48,6 +50,7 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
       await editor.navigate(pageLink, pos, false, inNewWindow);
       break;
     }
+
     case "PageRef": {
       const bracketedPageRef = mdTree.children[0].text;
       await editor.navigate(
@@ -58,9 +61,11 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
       );
       break;
     }
+
     case "NakedURL":
       await editor.openUrl(mdTree.children[0].text);
       break;
+
     case "Image":
     case "Link": {
       const urlNode = findNodeOfType(mdTree, "URL");
@@ -80,6 +85,7 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
       }
       break;
     }
+
     case "CommandLink": {
       const commandName = mdTree.children[1].children[0].text;
       await system.invokeCommand(commandName);

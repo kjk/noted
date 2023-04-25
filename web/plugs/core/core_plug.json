@@ -35,12 +35,7 @@
       "path": "./page.ts:reindexSpace",
       "env": "server"
     },
-    "deletePage": {
-      "path": "./page.ts:deletePage",
-      "command": {
-        "name": "Page: Delete"
-      }
-    },
+
     "attachmentQueryProvider": {
       "path": "./attachment.ts:attachmentQueryProvider",
       "events": ["query:attachment"]
@@ -69,14 +64,6 @@
     "itemQueryProvider": {
       "path": "./item.ts:queryProvider",
       "events": ["query:item"]
-    },
-    "linkNavigate": {
-      "path": "./navigate.ts:linkNavigate",
-      "command": {
-        "name": "Navigate To page",
-        "key": "Ctrl-Enter",
-        "mac": "Cmd-Enter"
-      }
     },
 
     "navigateHome": {
