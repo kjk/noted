@@ -1,5 +1,11 @@
 import { KV, createKVStoresDB } from "./lib/dbutil";
-import { blobToUtf8, genRandomID, len, throwIf, utf8ToBlob } from "./lib/util";
+import {
+  blobToUtf8,
+  genRandomNoteContentID,
+  genRandomNoteID,
+  len,
+  utf8ToBlob,
+} from "./lib/util";
 
 import { addToken } from "./lib/githubapi";
 
@@ -54,7 +60,7 @@ const kNoteFieldsCount = 7;
 // folllowed by data for for a given kind of log entry
 // for notes, the first elment of data is note id
 function mkLogCreateNote(title, kind, isDaily = false) {
-  let id = genRandomID(8);
+  let id = genRandomNoteID(8);
   return [kLogCreateNote, Date.now(), id, title, kind, isDaily];
 }
 
@@ -273,7 +279,7 @@ export class StoreLocal extends StoreCommon {
 
   async noteAddVersion(note, content) {
     let id = note.valueOf();
-    let contentId = genRandomID(12);
+    let contentId = genRandomNoteContentID();
     let log = mkLogChangeContent(id, contentId);
     await this.kvContent.set(contentId, content);
     await this.appendLog(log);

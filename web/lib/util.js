@@ -1,3 +1,5 @@
+import { nanoid } from "./nanoid";
+
 /**
  * return length of an array
  * @param {*} o
@@ -483,22 +485,20 @@ export async function filterDataTransferEntries(dt, fnAllowed = null) {
   return res;
 }
 
-const SHORT_ID_SYMBOLS =
-  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const nShortSymbols = len(SHORT_ID_SYMBOLS);
-
 /**
  * @param {number} n
  * @returns {string}
  */
 export function genRandomID(n) {
-  let res = "";
-  for (let i = 0; i < n; i++) {
-    const idx = Math.floor(Math.random() * nShortSymbols);
-    const c = SHORT_ID_SYMBOLS[idx];
-    res = res + c;
-  }
-  return res;
+  return nanoid(n);
+}
+
+export function genRandomNoteID() {
+  return nanoid(6);
+}
+
+export function genRandomNoteContentID() {
+  return nanoid(12);
 }
 
 /**
