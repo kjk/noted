@@ -1,6 +1,5 @@
 <script>
   import { onDestroy } from "svelte";
-  import { focus } from "../actions/focus";
   import { trapFocus } from "./util";
 
   export let open = false;
@@ -16,9 +15,9 @@
    * @param {MouseEvent} ev
    */
   function handleClick(ev) {
-    console.log("Overlay: handleClick:", ev);
     if (ev.target == overlay) {
       // clicked on overlay => dismiss
+      console.log("Overlay: handleClick: outside", ev);
       ev.stopPropagation();
       close();
     }

@@ -361,8 +361,16 @@
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="note-title grow px-0.5 ml-[-0.125rem] block user-modify-plain text-xl font-semibold focus-within:outline-white bg-white placeholder:italic hover:bg-gray-50"
+      class="note-title px-2 ml-[-0.125rem] user-modify-plain text-xl font-semibold focus-within:outline-none bg-white placeholder:italic hover:bg-gray-50 border-t border-l border-r border-gray-400 rounded-t-md"
     />
+    <button
+      use:gtooltip={"create new note"}
+      on:click={() => createNewNote("")}
+      class="cursor-pointer border-b border-gray-400 text-xl px-2 hover:bg-gray-50"
+    >
+      +
+    </button>
+    <div class="grow border-b border-gray-400 text-xl">&nbsp;</div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
       on:click|preventDefault|stopPropagation={selectPage}
@@ -375,7 +383,7 @@
     </div>
     <button
       use:gtooltip={newNoteShortcut}
-      on:click={createNewNote}
+      on:click={() => createNewNote("")}
       class="relative text-sm border ml-2 border-gray-300 hover:bg-gray-100 rounded-md py-0.5 px-2"
       >new note</button
     >

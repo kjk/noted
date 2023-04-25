@@ -166,7 +166,12 @@
     let n = len(src);
     dst.length = n;
     for (let i = 0; i < n; i++) {
-      dst[i] = src[i].toLowerCase();
+      let s = src[i];
+      // TODO: temporary
+      if (typeof s !== "string") {
+        s = s.toString();
+      }
+      dst[i] = s.toLowerCase();
     }
   }
 
