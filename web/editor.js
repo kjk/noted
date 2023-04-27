@@ -395,6 +395,9 @@ export class Editor {
       state: this.createEditorState("", false),
       parent: editorElement,
     });
+    if (this.editorView.contentDOM) {
+      this.tweakEditorDOM(this.editorView.contentDOM);
+    }
 
     this.pageNavigator = new PathPageNavigator(
       "", // indexPage
@@ -413,7 +416,11 @@ export class Editor {
     let syscall = editorSyscalls(this);
     setEdiotrSyscall(syscall);
   }
-
+  tweakEditorDOM(contentDOM) {
+    contentDOM.spellcheck = true;
+    contentDOM.setAttribute("autocorrect", "on");
+    contentDOM.setAttribute("autocapitalize", "on");
+  }
   async reloadPage() {
     console.log("Editor.reloadPage");
     // TODO: implement me
