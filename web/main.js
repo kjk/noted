@@ -7,6 +7,19 @@ import "./css/main.css";
 import App from "./Noted.svelte";
 import GithubLoginFailed from "./GithubLoginFailed.svelte";
 
+async function getLoggedUser() {
+  let user = localStorage.getItem("loggedUser");
+  if (user) {
+    return user;
+  }
+  let rsp = await fetch("/auth/user");
+  if (rsp.status !== 200) {
+    return null;
+  }
+  user = await rsp.text();
+  return user;
+}
+
 const args = {
   target: document.getElementById("app"),
 };

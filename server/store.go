@@ -19,15 +19,16 @@ import (
 )
 
 type UserInfo struct {
-	GitHubUser
+	User       string
+	Email      string
 	lastLogKey string // log-0, log-1 etc.
 }
 
 var (
-	ghTokenToUserInfo = map[string]*UserInfo{}
-	upstashDbURL      string
-	upstashPrefix     = "" // dev: if isDev
-	r2KeyPrefix       = "" // dev/ if isDev
+	emailToUserInfo = map[string]*UserInfo{}
+	upstashDbURL    string
+	upstashPrefix   = "" // dev: if isDev
+	r2KeyPrefix     = "" // dev/ if isDev
 
 	r2Endpoint = "71694ef61795ecbe1bc331d217dbd7a7.r2.cloudflarestorage.com"
 	r2Bucket   = "noted"
@@ -248,35 +249,30 @@ func contentGet(userID string, contentID string) (io.ReadCloser, error) {
 	return obj, err
 }
 
-func getLoggedUser(r *http.Request) (*UserInfo, error) {
-	ghToken := getGitHubTokenFromRequest(r)
-	if ghToken == "" {
-		return nil, fmt.Errorf("user not logged in (no GitHub token)")
+func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
+	cookie := getSecureCookie(r)
+	if cookie == nil || cookie.Email == "" {
+		return nil, fmt.Errorf("user not logged in (no cookie)")
 	}
+	email := cookie.Email
 	muStore.Lock()
 	defer muStore.Unlock()
-	userInfo, ok := ghTokenToUserInfo[ghToken]
-	if ok {
-		return userInfo, nil
-	}
 
-	muStore.Unlock()
-	_, ghUser, err := getGitHubUserInfo(ghToken)
-
-	muStore.Lock()
-	if err != nil {
-		return nil, err
+	userInfo, ok := emailToUserInfo[email]
+	if !ok {
+		userInfo = &UserInfo{
+			Email: cookie.Email,
+			User:  cookie.User,
+		}
+		emailToUserInfo[email] = userInfo
 	}
-	userInfo = &UserInfo{
-		GitHubUser: *ghUser,
-	}
-	ghTokenToUserInfo[ghToken] = userInfo
+	w.Header().Add("X-User-Info", email)
 	return userInfo, nil
 }
 
 func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
-	userInfo, err := getLoggedUser(r)
+	userInfo, err := getLoggedUser(r, w)
 	if serveIfError(w, err) {
 		logf(ctx(), "handleStore: %s, err: %s\n", uri, err)
 		return

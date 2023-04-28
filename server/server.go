@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -14,56 +15,108 @@ import (
 	"time"
 
 	"github.com/felixge/httpsnoop"
+	"github.com/gorilla/securecookie"
 	hutil "github.com/kjk/common/httputil"
 
 	"github.com/kjk/common/server"
 	"github.com/kjk/common/u"
 	"golang.org/x/exp/slices"
-	"golang.org/x/oauth2"
 )
 
 var (
+	cookieName   = "nckie" // noted cookie
+	secureCookie *securecookie.SecureCookie
+
 	httpPort    = 9236
 	proxyURLStr = "http://localhost:3047"
+	proxyURL    *url.URL
+	// maps ouath secret to login info
+	loginsInProress = map[string]string{}
 )
 
-var (
-	githubEndpoint = oauth2.Endpoint{
-		AuthURL:  "https://github.com/login/oauth/authorize",
-		TokenURL: "https://github.com/login/oauth/access_token",
+func getGitHubSecrets() (string, string) {
+	if isDev() {
+		return "8adf394a86b4daa3fef8", secretGitHub
 	}
-
-	// https://github.com/settings/applications/2098699
-	oauthGitHubConf = &oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
-		// select level of access you want https://developer.github.com/v3/oauth/#scopes
-		Scopes:   []string{"user:email", "read:user"},
-		Endpoint: githubEndpoint,
-	}
-
-	// random string for oauth2 API calls to protect against CSRF
-	oauthSecretPrefix = "34234234-"
-)
-
-func setGitHubAuth() {
-	logf(ctx(), "setGitHubAuth()\n")
-	oauthGitHubConf.ClientID = "8ded4c0d72d9c14a388e"
-	oauthGitHubConf.ClientSecret = secretGitHub
+	return "8ded4c0d72d9c14a388e", secretGitHub
 }
 
-func setGitHubLocalAuth() {
-	logf(ctx(), "setGitHubLocalAuth()\n")
-	oauthGitHubConf.ClientID = "8adf394a86b4daa3fef8"
-	oauthGitHubConf.ClientSecret = secretGitHub
+type SecureCookieValue struct {
+	User  string // "kjk"
+	Email string // "kkowalczyk@gmail.com"
+}
+
+func setSecureCookie(w http.ResponseWriter, cookieVal *SecureCookieValue) {
+	val := make(map[string]string)
+	val["user"] = cookieVal.User
+	val["email"] = cookieVal.Email
+	if encoded, err := secureCookie.Encode(cookieName, val); err == nil {
+		// TODO: set expiration (Expires    time.Time) long time in the future?
+		cookie := &http.Cookie{
+			Name:  cookieName,
+			Value: encoded,
+			Path:  "/",
+		}
+		http.SetCookie(w, cookie)
+	} else {
+		fmt.Printf("setSecureCookie(): error encoding secure cookie %s\n", err)
+	}
+}
+
+const WeekInSeconds = 60 * 60 * 24 * 7
+
+// to delete the cookie value (e.g. for logging out), we need to set an
+// invalid value
+func deleteSecureCookie(w http.ResponseWriter) {
+	cookie := &http.Cookie{
+		Name:   cookieName,
+		Value:  "deleted",
+		MaxAge: WeekInSeconds,
+		Path:   "/",
+	}
+	http.SetCookie(w, cookie)
+}
+
+func getSecureCookie(r *http.Request) *SecureCookieValue {
+	var ret *SecureCookieValue
+	if cookie, err := r.Cookie(cookieName); err == nil {
+		// detect a deleted cookie
+		if cookie.Value == "deleted" {
+			return nil
+		}
+		val := make(map[string]string)
+		if err = secureCookie.Decode(cookieName, cookie.Value, &val); err != nil {
+			// most likely expired cookie, so ignore. Ideally should delete the
+			// cookie, but that requires access to http.ResponseWriter, so not
+			// convenient for us
+			//fmt.Printf("Error decoding cookie %s\n", err)
+			return nil
+		}
+		//fmt.Printf("Got cookie %q\n", val)
+		ret = &SecureCookieValue{}
+		var ok bool
+		if ret.User, ok = val["user"]; !ok {
+			fmt.Printf("Error decoding cookie, no 'user' field\n")
+			return nil
+		}
+	}
+	return ret
+}
+
+func decodeUserFromCookie(r *http.Request) string {
+	cookie := getSecureCookie(r)
+	if nil == cookie {
+		return ""
+	}
+	return cookie.User
 }
 
 var (
 	pongTxt = []byte("pong")
 )
 
-func logLogin(ctx context.Context, r *http.Request, token *oauth2.Token) {
-	ghToken := token.AccessToken
+func logLogin(ctx context.Context, r *http.Request, accessToken string) {
+	ghToken := accessToken
 	_, user, err := getGitHubUserInfo(ghToken)
 	if err != nil {
 		logf(ctx, "getGitHubUserInfo(%s) faled with '%s'\n", ghToken, err)
@@ -78,66 +131,176 @@ func logLogin(ctx context.Context, r *http.Request, token *oauth2.Token) {
 	pirschSendEvent(r, "github_login", 0, m)
 }
 
-// /auth/githubcb
-// as set in:
-// https://github.com/settings/applications/2175661
-// https://github.com/settings/applications/2175803
-func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	logf(ctx, "handleGithubCallback: '%s'\n", r.URL)
-	state := r.FormValue("state")
-	if !strings.HasPrefix(state, oauthSecretPrefix) {
-		logErrorf(ctx, "invalid oauth state, expected '%s*', got '%s'\n", oauthSecretPrefix, state)
-		uri := "/github_login_failed?err=" + url.QueryEscape("invalid oauth state")
-		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
-		return
+func httpScheme(r *http.Request) string {
+	isLocal := strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, "127.0.0.1")
+	if isLocal {
+		return "http://"
 	}
-
-	code := r.FormValue("code")
-	token, err := oauthGitHubConf.Exchange(context.Background(), code)
-	if err != nil {
-		// logErrorf(ctx, "oauthGoogleConf.Exchange() failed with '%s',\n", err)
-		logErrorf(ctx, "oauthGoogleConf.Exchange() failed with '%s, clientID: '%s', secret: '%s',\n", err, oauthGitHubConf.ClientID, oauthGitHubConf.ClientSecret)
-		uri := "/github_login_failed?err=" + url.QueryEscape(err.Error())
-		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
-		return
-	}
-	logf(ctx, "token: %#v", token)
-	ac := token.AccessToken
-	uri := "/github_success?access_token=" + ac
-	logf(ctx, "token: %#v\nuri: %s\n", token, uri)
-	http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
-
-	// can't put in the background because that cancels ctx
-	logLogin(ctx, r, token)
+	return "https://"
 }
 
 // /auth/ghlogin
 func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// GitHub seems to completely ignore Redir, which makes testing locally hard
-	// TODO: generate temporary oathSecret
-	uri := oauthGitHubConf.AuthCodeURL(oauthSecretPrefix, oauth2.AccessTypeOnline)
-	logf(ctx, "handleLoginGitHub: to '%s'\n", uri)
-	http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
+	redirectURL := strings.TrimSpace(r.FormValue("redirect"))
+	logf(ctx, "handleLoginGitHub: '%s', redirect: '%s'\n", r.RequestURI, redirectURL)
+	if redirectURL == "" {
+		redirectURL = "/"
+		return
+	}
+	clientID, _ := getGitHubSecrets()
+
+	// secret value passed to auth server and then back to us
+	state := genRandomID(8)
+	muStore.Lock()
+	loginsInProress[state] = redirectURL
+	muStore.Unlock()
+
+	cb := httpScheme(r) + r.Host + "/auth/githubcb"
+	logf(ctx, "handleLogin: cb='%s'\n", cb)
+
+	vals := url.Values{}
+	vals.Add("client_id", clientID)
+	vals.Add("scope", "read:user")
+	vals.Add("state", state)
+	vals.Add("redirect_uri", cb)
+
+	authURL := "https://github.com/login/oauth/authorize?" + vals.Encode()
+	logf(ctx, "handleLogin: doing auth 302 redirect to '%s'\n", authURL)
+	http.Redirect(w, r, authURL, http.StatusFound) // 302
 }
 
 // /auth/ghlogout
 func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logf(ctx, "handleLogoutGitHub()\n")
-	ghToken := getGitHubTokenFromRequest(r)
-	if ghToken == "" {
-		logf(ctx, "handleLogoutGitHub: no token\n")
-		serveInternalError(w, r, "no GitHub token")
+	cookie := getSecureCookie(r)
+	if cookie == nil {
+		logf(ctx, "handleLogoutGitHub: no cookie\n")
+		http.Error(w, "no cookie", http.StatusBadRequest)
 		return
 	}
-	serveText(w, http.StatusOK, "ok")
+	email := cookie.Email
+	deleteSecureCookie(w)
 	muStore.Lock()
 	defer muStore.Unlock()
-	delete(ghTokenToUserInfo, ghToken)
+	delete(emailToUserInfo, email)
+
+	serveText(w, http.StatusOK, "ok")
+}
+
+const errorURL = "/github_login_failed"
+
+// /auth/user
+// returns JSON with user info in the body
+func handleAuthUser(w http.ResponseWriter, r *http.Request) {
+	logf(ctx(), "handleAuthUser: '%s'\n", r.URL)
+	v := map[string]interface{}{}
+	cookie := getSecureCookie(r)
+	if cookie == nil {
+		v["error"] = "not logged in"
+		logf(ctx(), "handleAuthUser: not logged in\n")
+	} else {
+		v["user"] = cookie.User
+		v["email"] = cookie.Email
+		logf(ctx(), "handleAuthUser: logged in as '%s', '%s'\n", cookie.User, cookie.Email)
+	}
+	serveJSONOK(w, r, v)
+}
+
+// /auth/githubcb
+// as set in:
+// https://github.com/settings/applications/2175661
+// https://github.com/settings/applications/2175803
+func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
+	logf(ctx(), "handleGithubCallback: '%s'\n", r.URL)
+	state := r.FormValue("state")
+	redirect := loginsInProress[state]
+	if redirect == "" {
+		logErrorf(ctx(), "invalid oauth state, no redirect for state '%s'\n", state)
+		uri := "/github_login_failed?err=" + url.QueryEscape("invalid oauth state")
+		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
+		return
+	}
+
+	// https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#2-users-are-redirected-back-to-your-site-by-github
+	code := r.FormValue("code")
+	vals := url.Values{}
+	clientId, clientSecret := getGitHubSecrets()
+	vals.Add("client_id", clientId)
+	vals.Add("client_secret", clientSecret)
+	vals.Add("code", code)
+	// redirectURL := httpScheme(r) + r.Host + "/oauthgithubcb2"
+	// vals.Add("redirect_uri", redirectURL)
+	uri := "https://github.com/login/oauth/access_token?" + vals.Encode()
+	hdrs := map[string]string{
+		"Accept": "application/json",
+	}
+	resp, err := postWithHeaders(uri, hdrs)
+	if err != nil {
+		logf(ctx(), "http.Post() failed with '%s'\n", err)
+		// logForm(r)
+		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
+		return
+	}
+	var m map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&m)
+	if err != nil {
+		logf(ctx(), "json.NewDecoder() failed with '%s'\n", err)
+		// logForm(r)
+		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
+	}
+
+	errorStr := mapStr(m, "error")
+	if errorStr != "" {
+		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(errorStr), http.StatusTemporaryRedirect)
+		return
+	}
+
+	access_token := mapStr(m, "access_token")
+	token_type := mapStr(m, "token_type")
+	scope := mapStr(m, "scope")
+
+	logf(ctx(), "access_token: %s, token_type: %s, scope: %s\n", access_token, token_type, scope)
+
+	_, i, err := getGitHubUserInfo(access_token)
+	if err != nil {
+		logf(ctx(), "getGitHubUserInfo() failed with '%s'\n", err)
+		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
+		return
+	}
+	user := i.Login
+	logf(ctx(), "github user: %s\n", user)
+	cookie := &SecureCookieValue{}
+	cookie.User = user
+	setSecureCookie(w, cookie)
+	logf(ctx(), "handleOauthGitHubCallback: redirect: '%s'\n", redirect)
+	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
+
+	// can't put in the background because that cancels ctx
+	logLogin(ctx(), r, access_token)
+}
+
+func mapStr(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func postWithHeaders(uri string, hdrs map[string]string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", uri, nil)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range hdrs {
+		req.Header.Add(k, v)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	return resp, err
 }
 
 func permRedirect(w http.ResponseWriter, r *http.Request, newURL string) {
@@ -180,6 +343,9 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		case "/auth/githubcb":
 			handleGithubCallback(w, r)
+			return
+		case "/auth/user":
+			handleAuthUser(w, r)
 			return
 		}
 
