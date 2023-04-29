@@ -47,7 +47,8 @@ func getSecretsFromEnv() {
 }
 
 var (
-	flgRunDev bool
+	flgRunDev        bool
+	flgNoBrowserOpen bool
 )
 
 func isDev() bool {
@@ -69,6 +70,7 @@ func main() {
 		flag.BoolVar(&flgBuild, "build", false, "run yarn build to build frontend")
 		flag.BoolVar(&flgCi, "ci", false, "true if needs to tell we're running under ci (github actions)")
 		flag.BoolVar(&flgWc, "wc", false, "count lines")
+		flag.BoolVar(&flgNoBrowserOpen, "no-open", false, "don't open browser when running dev server")
 		flag.Parse()
 	}
 

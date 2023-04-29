@@ -123,6 +123,7 @@ func mkLogKeyPrefix(userID string) string {
 }
 
 func storeGetLogSortedKeys(userID string) ([]string, error) {
+	timeStart := time.Now()
 	prefix := mkLogKeyPrefix(userID)
 
 	c := getUpstashClient()
@@ -133,7 +134,7 @@ func storeGetLogSortedKeys(userID string) ([]string, error) {
 	}
 	keys := res.Val()
 	err := sortLogKeys(keys)
-	logf(ctx(), "storeGetLog(): %d keys for prefix %s, keys: %v\n", len(keys), prefix, keys)
+	logf(ctx(), "storeGetLog(): %d keys for prefix %s, keys: %v, took %s\n", len(keys), prefix, keys, time.Since(timeStart))
 	return keys, err
 }
 
@@ -142,7 +143,6 @@ func storeAppendLog(userID string, v []interface{}) error {
 	logf(ctx(), "storeAppendLog()\n")
 	keys, err := storeGetLogSortedKeys(userID)
 	if err != nil {
-
 		return err
 	}
 	c := getUpstashClient()
@@ -186,18 +186,39 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 	}
 	c := getUpstashClient()
 
-	var logs [][]interface{}
+	logs := make([][]interface{}, 0)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: optmize for start
 	for _, key := range keys {
+		if start > 0 {
+			// TODO: do pipelining. ideally do lua script that returns
+			// keys and their lengths in one go, to reduce latency
+			timeStart := time.Now()
+			nValsRes := c.LLen(key)
+			logf(ctx(), "  LLen for '%s' took %s\n", key, time.Since(timeStart))
+			if nValsRes.Err() != nil {
+				return nil, nValsRes.Err()
+			}
+			nVals := int(nValsRes.Val())
+			logf(ctx(), "  key: %s, nVals: %d, start: %d\n", key, nVals, start)
+			if start >= nVals {
+				start -= nVals
+				continue
+			}
+		}
+
+		timeStart := time.Now()
 		res := c.LRange(key, 0, -1)
+		logf(ctx(), "  LRange for '%s' took %s\n", key, time.Since(timeStart))
 		if res.Err() != nil {
 			return nil, res.Err()
 		}
 		vals := res.Val()
-		for _, jsonStr := range vals {
+		for i, jsonStr := range vals {
+			if i < start {
+				continue
+			}
 			var v []interface{}
 			err := json.Unmarshal([]byte(jsonStr), &v)
 			if err != nil {
@@ -205,12 +226,10 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 			}
 			logs = append(logs, v)
 		}
+		start = 0
 	}
 	logf(ctx(), "%d log entries for user %s\n", len(logs), userID)
-	if start > len(logs) {
-		return nil, nil
-	}
-	return logs[start:], nil
+	return logs, nil
 }
 
 func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
