@@ -15,7 +15,6 @@ export default defineConfig({
       input: {
         main: resolve("web", "index.html"),
         // test: resolve("web", "test.html"),
-        github_success: resolve("web", "github_success.html"),
       },
 
       output: {

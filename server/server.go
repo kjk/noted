@@ -367,7 +367,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 
 		if proxyHandler != nil {
 			transformRequestForProxy := func() {
-				uris := []string{"/github_success"}
+				uris := []string{}
 				shouldProxyURI := slices.Contains(uris, uri)
 				if !shouldProxyURI {
 					return
