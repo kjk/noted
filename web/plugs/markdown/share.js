@@ -1,8 +1,9 @@
 import { markdown, space } from "../../plug-api/silverbullet-syscall/mod.js";
 
-import { LocalFileSystem } from "$sb/plugos-syscall/mod.js";
-import { asset } from "$sb/plugos-syscall/mod.js";
+import { LocalFileSystem } from "../../plug-api/plugos-syscall/mod.js";
+import { asset } from "../../plug-api/plugos-syscall/mod.js";
 import { renderMarkdownToHtml } from "./markdown_render.js";
+
 export async function sharePublisher(event) {
   const path = event.uri.split(":")[1];
   const pageName = event.name;

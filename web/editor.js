@@ -63,12 +63,12 @@ import { PathPageNavigator } from "./navigator.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
+import { addParentPointers } from "./plug-api/lib/tree.js";
 import { anchorComplete } from "./plugs/core/anchor.js";
 import buildMarkdown from "./markdown_parser/parser.js";
 import { cleanModePlugins } from "./cm_plugins/clean.js";
 import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
-import { editorSyscalls } from "./syscalls/editor.js";
 import { embedWidget } from "./plugs/core/embed.js";
 import { emojiCompleter } from "./plugs/emoji/emoji.js";
 import { focusEditorView } from "./lib/cmutil.js";
@@ -76,8 +76,10 @@ import { getNoteTitle } from "./notesStore.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
+import { log } from "./lib/log.js";
+import { parse } from "./markdown_parser/parse_tree.js";
 import { safeRun } from "./plugos/util.js";
-import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
+import { setEditor } from "./plug-api/silverbullet-syscall/editor.js";
 import { setMarkdownLang } from "./plug-api/silverbullet-syscall/markdown.js";
 import { smartQuoteKeymap } from "./cm_plugins/smart_quotes.js";
 import { tagComplete } from "./plugs/core/tags.js";
@@ -365,6 +367,8 @@ export class Editor {
   viewDispatch;
   currentNote;
   editorCommands;
+  markdownLang;
+
   loadPage = async (pageName) => {
     return false;
   };
@@ -380,7 +384,7 @@ export class Editor {
     this.slashCommandHook = new SlashCommandHook(this);
     addSlashHooks(this.slashCommandHook);
     this.viewDispatch = (args) => {
-      console.log("viewDispatch:", args);
+      log("viewDispatch:", args);
     };
     this.mdExtensions = loadCoreMarkdownExtensions();
     this.debouncedUpdateEvent = throttle(() => {
@@ -405,7 +409,7 @@ export class Editor {
     );
 
     this.pageNavigator.subscribe(async (pageName, pos) => {
-      console.log("Now navigating to", pageName);
+      log("Now navigating to", pageName);
       if (!this.editorView) {
         return;
       }
@@ -413,8 +417,7 @@ export class Editor {
     });
 
     // TODO: long term we want to undo this redirection
-    let syscall = editorSyscalls(this);
-    setEdiotrSyscall(syscall);
+    setEditor(this);
   }
   tweakEditorDOM(contentDOM) {
     contentDOM.spellcheck = true;
@@ -422,12 +425,12 @@ export class Editor {
     contentDOM.setAttribute("autocapitalize", "on");
   }
   async reloadPage() {
-    console.log("Editor.reloadPage");
+    log("Editor.reloadPage");
     // TODO: implement me
   }
 
   async navigate(name, pos, replaceState = false, newWindow = false) {
-    console.log("Editor.navigate:", name, pos, replaceState, newWindow);
+    log("Editor.navigate:", name, pos, replaceState, newWindow);
     // TODO: we don't have indexPage
     // if (!name) {
     //   name = this.indexPage;
@@ -453,7 +456,7 @@ export class Editor {
     if (this.currentNote) {
       title = getNoteTitle(this.currentNote);
     }
-    console.log(`Editor.currentPage: '${title}'`);
+    log(`Editor.currentPage: '${title}'`);
     return title;
   }
 
@@ -473,7 +476,7 @@ export class Editor {
           key: def.command.key,
           mac: def.command.mac,
           run: () => {
-            console.log("commandKeyBindings.run:", def);
+            log("commandKeyBindings.run:", def);
             if (def.command.contexts) {
               const context = this.getContext();
               if (!context || !def.command.contexts.includes(context)) {
@@ -500,8 +503,8 @@ export class Editor {
 
     let tabSize = 4;
 
-    let markdownLang = buildMarkdown(this.mdExtensions);
-    setMarkdownLang(markdownLang);
+    this.markdownLang = buildMarkdown(this.mdExtensions);
+    setMarkdownLang(this.markdownLang);
 
     /** @type {Extension[]}*/
     const exts = [
@@ -511,7 +514,7 @@ export class Editor {
       keymap.of([indentWithTab]),
 
       markdown({
-        base: markdownLang,
+        base: this.markdownLang,
         codeLanguages: [
           LanguageDescription.of({
             name: "yaml",
@@ -763,6 +766,7 @@ export class Editor {
         class {
           update(update) {
             if (update.docChanged) {
+              editor.cachedParsedMarkdown = null;
               editor.viewDispatch({ type: "page-changed" });
               editor.debouncedUpdateEvent();
               editor.docChanged();
@@ -882,7 +886,7 @@ export class Editor {
   }
 
   async dispatchAppEvent(name, data) {
-    console.log("Editor.dispatchAppEvent:", name, data);
+    log("Editor.dispatchAppEvent:", name, data);
     let responses = [];
     for (const [eventName, def] of Object.entries(events)) {
       let fn = def.path;
@@ -892,12 +896,42 @@ export class Editor {
         let result = await fn(data);
         if (result) {
           responses.push(result);
-          console.log("dispatchAppEvent result:", result, "fn:", fn.name);
+          log("dispatchAppEvent result:", result, "fn:", fn.name);
         }
       }
     }
     // throw new Error(`Event ${name} not found`);
     return responses;
+  }
+
+  cachedParsedMarkdown;
+  cachedParsedMarkdownWithParents;
+
+  getParsedMarkdown(withParents = false) {
+    if (withParents) {
+      if (this.cachedParsedMarkdownWithParents) {
+        log(
+          "editor.getParseMarkdown: returning cachedParsedMarkdownWithParents"
+        );
+        return this.cachedParsedMarkdownWithParents;
+      }
+    }
+    if (this.cachedParsedMarkdown) {
+      log("editor.getParseMarkdown: returning cachedParsedMarkdown");
+      return this.cachedParsedMarkdown;
+    }
+
+    if (withParents) {
+      log("editor.getParseMarkdown: parsing with parents");
+      const text = this.getText();
+      this.cachedParsedMarkdownWithParents = parse(this.markdownLang, text);
+      addParentPointers(this.cachedParsedMarkdownWithParents);
+      return this.cachedParsedMarkdownWithParents;
+    }
+    log("editor.getParseMarkdown: parsing");
+    const text = this.getText();
+    this.cachedParsedMarkdown = parse(this.markdownLang, text);
+    return this.cachedParsedMarkdown;
   }
 
   /**
@@ -915,7 +949,7 @@ export class Editor {
   }
 
   async completeWithEvent(context, eventName) {
-    console.log("completeWithEvent eventName:", eventName);
+    log("completeWithEvent eventName:", eventName);
     const editorState = context.state;
     const selection = editorState.selection.main;
     const line = editorState.doc.lineAt(selection.from);
@@ -924,7 +958,7 @@ export class Editor {
       linePrefix,
       pos: selection.from,
     });
-    console.log("completeWithEvent results:", results);
+    log("completeWithEvent results:", results);
     if (len(results) === 0) {
       return null;
     }

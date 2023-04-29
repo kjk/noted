@@ -4,12 +4,15 @@ import {
   replaceNodesMatching,
 } from "../../plug-api/lib/tree.js";
 
+import { log } from "../../lib/log.js";
 import { markdown } from "../../plug-api/silverbullet-syscall/mod.js";
 
 export function encodePageUrl(name) {
   return name.replaceAll(" ", "_");
 }
+
 export async function cleanMarkdown(text, validPages) {
+  log("cleanMarkdown");
   const mdTree = await markdown.parseMarkdown(text);
   replaceNodesMatching(mdTree, (n) => {
     if (n.type === "WikiLink") {
@@ -40,7 +43,7 @@ export async function cleanMarkdown(text, validPages) {
       if (url.indexOf("://") === -1) {
         n.children[0].text = `fs/${url}`;
       }
-      console.log("Link", url);
+      log("Link", url);
     }
     if (n.type === "FencedCode") {
       const codeInfoNode = findNodeOfType(n, "CodeInfo");

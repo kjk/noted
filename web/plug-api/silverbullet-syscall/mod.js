@@ -1,3 +1,5 @@
+import { log } from "../../lib/log.js";
+
 export * as markdown from "./markdown.js";
 export { default as space } from "./space.js";
 export * as editor from "./editor.js";
@@ -17,6 +19,10 @@ class System {
       allCommands[cmd] = def.command;
     }
     return allCommands;
+  }
+
+  reloadPlugins() {
+    log("System.reloadPlugins");
   }
 
   async invokeCommand(commandName) {

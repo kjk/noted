@@ -8,7 +8,7 @@ import {
   system,
 } from "../../plug-api/silverbullet-syscall/mod.js";
 
-import { syscall } from "$sb/plugos-syscall/mod.js";
+import { syscall } from "../../plug-api/plugos-syscall/mod.js";
 
 export async function compileCommand() {
   const text = await editor.getText();

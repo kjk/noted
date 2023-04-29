@@ -10,13 +10,17 @@ import {
 } from "../../plug-api/lib/tree.js";
 
 import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
+import { log } from "../../lib/log.js";
 import { renderDirectives } from "./directives.js";
 
 export async function updateDirectivesOnPageCommand(arg) {
+  log("updateDirectivesOnPageCommand", arg);
   const explicitCall = typeof arg !== "string";
   const pageName = await editor.getCurrentPage();
   const text = await editor.getText();
-  const tree = await markdown.parseMarkdown(text);
+  const tree = editor.getParsedMarkdown();
+  // TODO: extractFrontMatter add parents which we then remove
+  // change extractFrontMatter to not add parents
   const metaData = extractFrontmatter(tree, ["$disableDirectives"]);
   if (metaData.$disableDirectives) {
     return;

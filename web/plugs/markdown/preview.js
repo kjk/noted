@@ -1,17 +1,17 @@
 import {
-  clientStore,
   editor,
   space,
   system,
 } from "../../plug-api/silverbullet-syscall/mod.js";
 
-import { asset } from "$sb/plugos-syscall/mod.js";
+import { asset } from "../../plug-api/plugos-syscall/mod.js";
 import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
 import { renderMarkdownToHtml } from "./markdown_render.js";
+
 export async function updateMarkdownPreview() {
-  if (!(await clientStore.get("enableMarkdownPreview"))) {
-    return;
-  }
+  // if (!(await clientStore.get("enableMarkdownPreview"))) {
+  //   return;
+  // }
   const text = await editor.getText();
   const mdTree = await parseMarkdown(text);
   const css = await asset.readAsset("assets/styles.css");

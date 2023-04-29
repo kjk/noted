@@ -11,6 +11,8 @@ import {
   system,
 } from "../../plug-api/silverbullet-syscall/mod.js";
 
+import { log } from "../../lib/log.js";
+
 const navigationNodeFinder = (t) =>
   [
     "WikiLink",
@@ -95,10 +97,10 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
 }
 
 export async function linkNavigate() {
-  let s = await editor.getText();
-  const mdTree = await markdown.parseMarkdown(s);
-  const newNode = nodeAtPos(mdTree, await editor.getCursor());
-  addParentPointers(mdTree);
+  log("linkNavigate");
+  const mdTree = editor.getParsedMarkdown(true);
+  let pos = await editor.getCursor();
+  const newNode = nodeAtPos(mdTree, pos);
   await actionClickOrActionEnter(newNode);
 }
 
@@ -106,9 +108,8 @@ export async function clickNavigate(event) {
   if (event.altKey) {
     return;
   }
-  let s = await editor.getText();
-  const mdTree = await markdown.parseMarkdown(s);
-  addParentPointers(mdTree);
+  log("clickNavigate");
+  const mdTree = editor.getParsedMarkdown(true);
   const newNode = nodeAtPos(mdTree, event.pos);
   await actionClickOrActionEnter(newNode, event.ctrlKey || event.metaKey);
 }

@@ -8,8 +8,9 @@ import { events } from "../../plug-api/plugos-syscall/mod.js";
 import { nodeAtPos } from "../../plug-api/lib/tree.js";
 
 export async function unfurlCommand() {
-  const mdTree = await markdown.parseMarkdown(await editor.getText());
-  const nakedUrlNode = nodeAtPos(mdTree, await editor.getCursor());
+  const mdTree = editor.getParsedMarkdown();
+  const pos = editor.getCursor();
+  const nakedUrlNode = nodeAtPos(mdTree, pos);
   const url = nakedUrlNode.children[0].text;
   console.log("Got URL to unfurl", url);
   const optionResponses = await events.dispatchEvent("unfurl:options", url);

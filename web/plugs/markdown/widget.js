@@ -1,5 +1,6 @@
 import { parseMarkdown } from "../../plug-api/silverbullet-syscall/markdown.js";
 import { renderMarkdownToHtml } from "./markdown_render.js";
+
 export async function markdownWidget(bodyText) {
   const mdTree = await parseMarkdown(bodyText);
   const html = await renderMarkdownToHtml(mdTree, {

@@ -15,11 +15,13 @@ import {
   space,
 } from "../../plug-api/silverbullet-syscall/mod.js";
 
+import { log } from "../../lib/log.js";
 import { niceDate } from "$sb/lib/dates.js";
 
 function getDeadline(deadlineNode) {
   return deadlineNode.children[0].text.replace(/📅\s*/, "");
 }
+
 export async function indexTasks({ name, tree }) {
   const tasks = [];
   removeQueries(tree);
@@ -55,16 +57,21 @@ export async function indexTasks({ name, tree }) {
   });
   await index.batchSet(name, tasks);
 }
+
 export function taskToggle(event) {
   return taskToggleAtPos(event.pos);
 }
+
 export function previewTaskToggle(eventString) {
+  log("previewTaskToggle");
   const [eventName, pos] = JSON.parse(eventString);
   if (eventName === "task") {
     return taskToggleAtPos(+pos);
   }
 }
+
 async function toggleTaskMarker(node, moveToPos) {
+  log("toggleTaskMarker", node);
   let changeTo = "[x]";
   if (node.children[0].text === "[x]" || node.children[0].text === "[X]") {
     changeTo = "[ ]";
@@ -100,29 +107,29 @@ async function toggleTaskMarker(node, moveToPos) {
     }
   }
 }
+
 export async function taskToggleAtPos(pos) {
-  const text = await editor.getText();
-  const mdTree = await markdown.parseMarkdown(text);
-  addParentPointers(mdTree);
+  log("taskToggleAtPos");
+  const mdTree = editor.getParsedMarkdown(true);
   const node = nodeAtPos(mdTree, pos);
   if (node && node.type === "TaskMarker") {
     await toggleTaskMarker(node, pos);
   }
 }
+
 export async function taskToggleCommand() {
-  const text = await editor.getText();
+  log("taskToggleCommand");
   const pos = await editor.getCursor();
-  const tree = await markdown.parseMarkdown(text);
-  addParentPointers(tree);
+  const tree = editor.getParsedMarkdown(true);
   const node = nodeAtPos(tree, pos);
   const taskMarker = findNodeOfType(node, "TaskMarker");
   await toggleTaskMarker(taskMarker, pos);
 }
+
 export async function postponeCommand() {
-  const text = await editor.getText();
+  log("postponeCommand");
   const pos = await editor.getCursor();
-  const tree = await markdown.parseMarkdown(text);
-  addParentPointers(tree);
+  const tree = editor.getParsedMarkdown(true);
   const node = nodeAtPos(tree, pos);
   const date = getDeadline(node);
   const option = await editor.filterBox(
@@ -160,6 +167,7 @@ export async function postponeCommand() {
     },
   });
 }
+
 export async function queryProvider({ query }) {
   const allTasks = [];
   for (const { key, page, value } of await index.queryPrefix("task:")) {
