@@ -697,11 +697,19 @@ export function noOp() {
 //     .join("");
 // }
 
+/**
+ * @param {string} str
+ * @returns {Blob}
+ */
 export function utf8ToBlob(str) {
   let bytes = new TextEncoder().encode(str);
   return new Blob([bytes]);
 }
 
+/**
+ * @param {Blob} blob
+ * @returns {Promise<string>}
+ */
 export async function blobToUtf8(blob) {
   let ab = await blob.arrayBuffer();
   let res = new TextDecoder().decode(ab);

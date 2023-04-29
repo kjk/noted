@@ -47,7 +47,8 @@ const kNoteIdxIsDaily = 3;
 const kNoteIdxLLatestVersionId = 4;
 const kNoteIdxCreatedAt = 5;
 const kNoteIdxUpdatedAt = 6;
-const kNoteFieldsCount = 7;
+const kNoteIdxSize = 7;
+const kNoteFieldsCount = 8;
 
 function logEntrySame(e1, e2) {
   let n = len(e1);
@@ -82,23 +83,49 @@ function makeRandomContentID(noteID) {
 // second is time in milliseconds since epoch (jan 1 1970 UTC)
 // folllowed by data for for a given kind of log entry
 // for notes, the first elment of data is note id
+/**
+ * @param {string} title
+ * @param {string} kind
+ * @param {boolean} isDaily
+ * @returns {any[]}
+ */
 function mkLogCreateNote(title, kind, isDaily = false) {
   let id = genRandomNoteID();
   return [kLogCreateNote, Date.now(), id, title, kind, isDaily];
 }
 
+/**
+ * @param {string} id
+ * @param {string} newTitle
+ * @returns {any[]}
+ */
 function mkLogChangeTitle(id, newTitle) {
   return [kLogChangeTitle, Date.now(), id, newTitle];
 }
 
-function mkLogChangeContent(id, contentId) {
-  return [kLogChangeContent, Date.now(), id, contentId];
+/**
+ * @param {string} id
+ * @param {string} contentId
+ * @param {number} size
+ * @returns {any[]}
+ */
+function mkLogChangeContent(id, contentId, size) {
+  return [kLogChangeContent, Date.now(), id, contentId, size];
 }
 
+/**
+ * @param {string} id
+ * @param {string} kind
+ * @returns {any[]}
+ */
 function mkLogChangeKind(id, kind) {
   return [kLogChangeKind, Date.now(), id, kind];
 }
 
+/**
+ * @param {string} id
+ * @returns {any[]}
+ */
 function mkLogDeleteNote(id) {
   return [kLogDeleteNote, Date.now(), id];
 }
@@ -183,8 +210,14 @@ class StoreCommon {
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogChangeContent) {
       let contentSha1 = e[3];
+      // compat: older entries didn't have size
+      let size = 0;
+      if (len(e) > 4) {
+        size = e[4];
+      }
       this.notesFlattened[idx + kNoteIdxLLatestVersionId] = contentSha1;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
+      this.notesFlattened[idx + kNoteIdxSize] = size;
     } else if (op === kLogChangeKind) {
       let kind = e[3];
       this.notesFlattened[idx + kNoteIdxKind] = kind;
@@ -214,18 +247,23 @@ class StoreCommon {
     return this.notes;
   }
 
-  getTitle(note) {
+  getValueAtIdx(note, idxVal) {
     let id = note.valueOf();
     let idx = this.notesMap.get(id);
-    let title = this.notesFlattened[idx + kNoteIdxTitle];
-    // log(`getTitle: id: ${id}, idx: ${idx}, title: ${title}`);
-    return title;
+    let res = this.notesFlattened[idx + idxVal];
+    return res;
+  }
+
+  getTitle(note) {
+    return this.getValueAtIdx(note, kNoteIdxTitle);
   }
 
   getLastModified(note) {
-    let id = note.valueOf();
-    let idx = store.notesMap.get(id);
-    return store.notesFlattened[idx + kNoteIdxUpdatedAt];
+    return this.getValueAtIdx(note, kNoteIdxUpdatedAt);
+  }
+
+  getSize(note) {
+    return this.getValueAtIdx(note, kNoteIdxSize);
   }
 }
 
@@ -318,17 +356,33 @@ export class StoreLocal extends StoreCommon {
     if (!contentId) {
       return null;
     }
-    return await this.kvContent.get(contentId);
+    let res = await this.kvContent.get(contentId);
+    // for compat we must handle string
+    if (typeof res === "string") {
+      return res;
+    }
+    let s = await blobToUtf8(res);
+    return s;
   }
 
+  /**
+   * @param {Note} note
+   * @param {string} content
+   */
   async noteAddVersion(note, content) {
     let id = note.valueOf();
     let contentId = makeRandomContentID(id);
-    let e = mkLogChangeContent(id, contentId);
-    await this.kvContent.set(contentId, content);
+    let blob = utf8ToBlob(content);
+    let size = blob.size;
+    let e = mkLogChangeContent(id, contentId, size);
+    await this.kvContent.set(contentId, blob);
     await this.appendAndApplyLog(e);
   }
 
+  /**
+   * @param {Note} note
+   * @param {string} title
+   */
   async setTitle(note, title) {
     let id = note.valueOf();
     let e = mkLogChangeTitle(id, title);
@@ -407,7 +461,7 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeSetContent(value, id) {
-    let uri = "/api/store/setContent?id" + encodeURIComponent(id);
+    let uri = "/api/store/setContent?id=" + encodeURIComponent(id);
     let opts = {
       method: "POST",
       body: value,
@@ -526,10 +580,11 @@ export class StoreRemote extends StoreCommon {
 
   async noteAddVersion(note, content) {
     let id = note.valueOf();
-    let blob = utf8ToBlob(content);
     let contentId = makeRandomContentID(id);
+    let blob = utf8ToBlob(content);
+    let size = blob.size;
     await this.storeSetContent(blob, contentId);
-    let e = mkLogChangeContent(id, contentId);
+    let e = mkLogChangeContent(id, contentId, size);
     await this.appendAndApplyLog(e);
     await this.kvContentCache.set(contentId, blob);
   }
@@ -612,4 +667,8 @@ export function noteGetCurrentVersion(note) {
 
 export function noteGetLastModified(note) {
   return store.getLastModified(note);
+}
+
+export function noteGetSize(note) {
+  return store.getSize(note);
 }
