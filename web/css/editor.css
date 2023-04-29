@@ -583,7 +583,8 @@
   margin-bottom: -3rem;
 }
 #sb-main .cm-editor .sb-table-widget table {
-  width: 100%;
+  /* width: 100%; */
+  table-layout: auto;
   border-spacing: 0;
 }
 #sb-main .cm-editor .sb-table-widget thead tr {
@@ -593,7 +594,7 @@
 }
 #sb-main .cm-editor .sb-table-widget th,
 #sb-main .cm-editor .sb-table-widget td {
-  padding: 8px;
+  padding: 4px 8px;
   border: 1px solid #e3e3e3;
 }
 
