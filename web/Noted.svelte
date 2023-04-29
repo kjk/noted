@@ -28,6 +28,7 @@
   import browser from "./lib/browser";
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
   import { log } from "./lib/log";
+  import { nanoid } from "./lib/nanoid";
 
   let commandPalettePageNames = [];
   let commandPaletteCommands = ["Delete Note"];
@@ -358,7 +359,8 @@
   }
 
   onMount(async () => {
-    log("Noted onMount");
+    let id = nanoid(8);
+    log("Noted onMount, id:", id);
 
     let user = await getLoggedUser();
     log("user:", user);

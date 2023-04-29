@@ -7,6 +7,8 @@ import {
   utf8ToBlob,
 } from "./lib/util";
 
+import { log } from "./lib/log";
+
 const kLogEntriesPerKey = 1024;
 
 /*
@@ -99,7 +101,7 @@ class StoreCommon {
    * @param {string} id
    */
   deleteNoteById(id) {
-    console.log("deleteNoteById:", id);
+    // log("deleteNoteById:", id);
     // let idx = this.notesMap.get(id);
     // this.notesFlattened.splice(idx, 1);
     this.notesMap.delete(id);
@@ -107,20 +109,20 @@ class StoreCommon {
     this.notes = this.notes.filter((n) => n.valueOf() != id);
   }
 
-  applyLog(log) {
-    // console.log("applyLog", log);
-    let op = log[0];
-    let createdAt = log[1];
+  applyLog(e) {
+    // log("applyLog", log);
+    let op = e[0];
+    let createdAt = e[1];
     let updatedAt = createdAt;
-    let id = log[2];
+    let id = e[2];
     if (op === kLogCreateNote) {
-      let title = log[3] || "";
-      let kind = log[4];
-      let isDaily = log[5];
+      let title = e[3] || "";
+      let kind = e[4];
+      let isDaily = e[5];
       let note = new Note(id);
       let idx = len(this.notesFlattened);
       this.notesMap.set(id, idx);
-      // console.log(
+      // log(
       //   "added note",
       //   id,
       //   "at idx",
@@ -153,7 +155,7 @@ class StoreCommon {
 
     if (!this.notesMap.has(id)) {
       let opName = logOpName(op);
-      console.log(
+      log(
         `applyLog: note ${id}, op: ${op} (${opName}) not found. Was deleted?`
       );
       return;
@@ -161,15 +163,15 @@ class StoreCommon {
 
     let idx = this.notesMap.get(id);
     if (op === kLogChangeTitle) {
-      let title = log[3];
+      let title = e[3];
       this.notesFlattened[idx + kNoteIdxTitle] = title;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogChangeContent) {
-      let contentSha1 = log[3];
+      let contentSha1 = e[3];
       this.notesFlattened[idx + kNoteIdxLLatestVersionId] = contentSha1;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogChangeKind) {
-      let kind = log[3];
+      let kind = e[3];
       this.notesFlattened[idx + kNoteIdxKind] = kind;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogDeleteNote) {
@@ -231,7 +233,7 @@ export class StoreLocal extends StoreCommon {
     }
     sortKeys(keys);
     for (let key of keys) {
-      // console.log("key:", key);
+      // log("key:", key);
       // @ts-ignore
       this.currKey = key;
       this.currLogs = await this.kvNotes.get(key);
@@ -243,16 +245,16 @@ export class StoreLocal extends StoreCommon {
   }
 
   async appendLog(log) {
-    // console.log("appendLog:", log, "size:", len(this.currLogs));
+    // log("appendLog:", log, "size:", len(this.currLogs));
     this.currLogs.push(log);
-    // console.log("currLogs:", this.currLogs);
+    // log("currLogs:", this.currLogs);
     await this.kvNotes.set(this.currKey, this.currLogs);
     let nLogs = len(this.currLogs);
     if (nLogs >= kLogEntriesPerKey) {
       let currId = parseInt(this.currKey.substring(4));
       let nextId = currId + 1;
       this.currKey = "log:" + nextId;
-      console.log("newKey:", this.currKey);
+      log("newKey:", this.currKey);
       this.currLogs = [];
     }
   }
@@ -261,7 +263,7 @@ export class StoreLocal extends StoreCommon {
     let log = mkLogCreateNote(title, type);
     await this.appendLog(log);
     let note = this.applyLog(log);
-    // console.log("newNote:", note);
+    // log("newNote:", note);
     return note;
   }
 
@@ -317,12 +319,12 @@ export class StoreRemote extends StoreCommon {
     return logs;
   }
 
-  async storeAppendLog(log) {
-    console.log("storeAppendLog:", log);
+  async storeAppendLog(e) {
+    log("storeAppendLog:", e);
     let uri = "/api/store/appendLog";
     let opts = {
       method: "POST",
-      body: JSON.stringify(log),
+      body: JSON.stringify(e),
     };
     let resp = await fetch(uri, opts);
     let ok = await resp.json();
@@ -359,7 +361,7 @@ export class StoreRemote extends StoreCommon {
     if (len(logs) == 0) {
       return [];
     }
-    console.log(`getNotes: ${len(logs)} log entries`);
+    log(`getNotes: ${len(logs)} log entries`);
     for (let log of logs) {
       this.applyLog(log);
     }
@@ -367,17 +369,17 @@ export class StoreRemote extends StoreCommon {
   }
 
   async appendLog(log) {
-    // console.log("appendLog:", log, "size:", len(this.currLogs));
-    // console.log("currLogs:", this.currLogs);
-    // console.log("appendLog:", log);
+    // log("appendLog:", log, "size:", len(this.currLogs));
+    // log("currLogs:", this.currLogs);
+    // log("appendLog:", log);
     await this.storeAppendLog(log);
     return this.applyLog(log);
   }
 
   async newNote(title, type = "md") {
-    let log = mkLogCreateNote(title, type);
-    let note = await this.appendLog(log);
-    console.log("newNote:", note);
+    let e = mkLogCreateNote(title, type);
+    let note = await this.appendLog(e);
+    log("newNote:", note);
     return note;
   }
 
@@ -466,7 +468,7 @@ export async function newNote(title, type = "md") {
 export async function noteAddVersion(note, content) {
   let currContent = await store.noteGetCurrentVersion(note);
   if (currContent == content) {
-    console.log("skipping addVersion, content is the same");
+    log("skipping addVersion, content is the same");
     return;
   }
   return store.noteAddVersion(note, content);

@@ -27,7 +27,7 @@ export class SlashCommandHook {
     }
   }
   add(name, def, func) {
-    log("SlashCommandHook.add:", def, "name:", name, "func:", func.name);
+    // log("SlashCommandHook.add:", def, "name:", name, "func:", func.name);
     this.slashCommands.set(def.name, {
       slashCommand: def,
       run: () => {

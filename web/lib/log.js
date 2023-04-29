@@ -4,10 +4,14 @@ export function warn(...args) {
 }
 
 // TODO: this should be logged as an event
-export function error(...args) {
-  console.error(...args);
-}
+// export function error(...args) {
+//   console.error(...args);
+// }
 
-export function log(...args) {
-  console.log(...args);
-}
+export let error = console.error;
+
+// export function log(...args) {
+//   console.log(...args);
+// }
+
+export let log = console.log;
