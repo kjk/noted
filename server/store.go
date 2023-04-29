@@ -122,7 +122,7 @@ func mkLogKeyPrefix(userID string) string {
 	return fmt.Sprintf("%s%s:notes-log:log-*", upstashPrefix, userID)
 }
 
-func storeGetLogKeys(userID string) ([]string, error) {
+func storeGetLogSortedKeys(userID string) ([]string, error) {
 	prefix := mkLogKeyPrefix(userID)
 
 	c := getUpstashClient()
@@ -140,7 +140,7 @@ func storeGetLogKeys(userID string) ([]string, error) {
 // TODO: prevent concurrent access to the same log key
 func storeAppendLog(userID string, v []interface{}) error {
 	logf(ctx(), "storeAppendLog()\n")
-	keys, err := storeGetLogKeys(userID)
+	keys, err := storeGetLogSortedKeys(userID)
 	if err != nil {
 
 		return err
@@ -171,13 +171,16 @@ func storeAppendLog(userID string, v []interface{}) error {
 	return res.Err()
 }
 
-func storeGetLogs(userID string) ([][]interface{}, error) {
-	logf(ctx(), "storeGetLogs()\n")
+func storeGetLogs(userID string, start int) ([][]interface{}, error) {
+	if start < 0 {
+		start = 0
+	}
+	logf(ctx(), "storeGetLogs(): userID: '%s', start: %d\n", userID, start)
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	keys, err := storeGetLogKeys(userID)
+	keys, err := storeGetLogSortedKeys(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -187,6 +190,7 @@ func storeGetLogs(userID string) ([][]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: optmize for start
 	for _, key := range keys {
 		res := c.LRange(key, 0, -1)
 		if res.Err() != nil {
@@ -203,7 +207,10 @@ func storeGetLogs(userID string) ([][]interface{}, error) {
 		}
 	}
 	logf(ctx(), "%d log entries for user %s\n", len(logs), userID)
-	return logs, nil
+	if start > len(logs) {
+		return nil, nil
+	}
+	return logs[start:], nil
 }
 
 func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
@@ -218,15 +225,14 @@ func mkContentKey(userID string, contentID string) string {
 	return fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, contentID)
 }
 
-func contentPut(userID string, r io.Reader) (string, error) {
-	contentID := genRandomID(12)
+func contentPut(userID string, contentID string, r io.Reader) error {
 	key := mkContentKey(userID, contentID)
 	logf(ctx(), "contentPut() id: %s, key: %s\n", contentID, key)
 	// Note: tried to PustObject(r) but the way minio client does multi-part
 	// uploads is not compatible with r2
 	d, err := ioutil.ReadAll(r)
 	if err != nil {
-		return "", err
+		return err
 	}
 	timeStart := time.Now()
 	defer func() {
@@ -234,7 +240,7 @@ func contentPut(userID string, r io.Reader) (string, error) {
 	}()
 	mc := getR2Client()
 	_, err = mc.UploadData(key, d, false)
-	return contentID, err
+	return err
 }
 
 func contentGet(userID string, contentID string) (io.ReadCloser, error) {
@@ -280,7 +286,12 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 	logf(ctx(), "handleStore: %s, userID: %s\n", uri, userID)
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
-		logs, err := storeGetLogs(userID)
+		startStr := r.URL.Query().Get("start")
+		start, err := strconv.Atoi(startStr)
+		if err != nil {
+			start = 0
+		}
+		logs, err := storeGetLogs(userID, start)
 		if serveIfError(w, err) {
 			return
 		}
@@ -329,11 +340,13 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if !checkMethodPOSTorPUT(w, r) {
 			return
 		}
-		id, err := contentPut(userID, r.Body)
+		contentID := r.URL.Query().Get("id")
+		if len(contentID) < 6 {
+			http.Error(w, "id must be at least 6 chars", http.StatusBadRequest)
+		}
+		err = contentPut(userID, contentID, r.Body)
 		if !serveIfError(w, err) {
-			res := map[string]interface{}{
-				"id": id,
-			}
+			res := map[string]interface{}{}
 			serveJSONOK(w, r, res)
 		}
 		return

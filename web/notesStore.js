@@ -1,14 +1,8 @@
 import { KV, createKVStoresDB } from "./lib/dbutil";
-import {
-  blobToUtf8,
-  genRandomNoteContentID,
-  genRandomNoteID,
-  len,
-  startTimer,
-  utf8ToBlob,
-} from "./lib/util";
+import { blobToUtf8, len, startTimer, utf8ToBlob } from "./lib/util";
 
 import { log } from "./lib/log";
+import { nanoid } from "./lib/nanoid";
 
 const kLogEntriesPerKey = 1024;
 
@@ -66,6 +60,21 @@ function logEntrySame(e1, e2) {
     }
   }
   return true;
+}
+
+/**
+ * @returns {string}
+ */
+export function genRandomNoteID() {
+  return nanoid(6);
+}
+
+/**
+ * @param {string} noteID
+ * @returns {string}
+ */
+function makeRandomContentID(noteID) {
+  return noteID + "-" + nanoid(4);
 }
 
 // each log entry is an array
@@ -314,7 +323,7 @@ export class StoreLocal extends StoreCommon {
 
   async noteAddVersion(note, content) {
     let id = note.valueOf();
-    let contentId = genRandomNoteContentID();
+    let contentId = makeRandomContentID(id);
     let e = mkLogChangeContent(id, contentId);
     await this.kvContent.set(contentId, content);
     await this.appendAndApplyLog(e);
@@ -361,9 +370,12 @@ export class StoreRemote extends StoreCommon {
     this.kvLogsCache = new KV(this.db, "logs-cache");
   }
 
-  async storeGetLogs() {
+  async storeGetLogs(start) {
     let elapsed = startTimer();
-    let uri = "/api/store/getLogs";
+    if (!start) {
+      start = 0;
+    }
+    let uri = "/api/store/getLogs?start=" + start;
     let opts = {};
     let resp = await fetch(uri, opts);
     let logs = await resp.json();
@@ -394,15 +406,14 @@ export class StoreRemote extends StoreCommon {
     return blob;
   }
 
-  async storeSetContent(value) {
-    let uri = "/api/store/setContent";
+  async storeSetContent(value, id) {
+    let uri = "/api/store/setContent?id" + encodeURIComponent(id);
     let opts = {
       method: "POST",
       body: value,
     };
     let resp = await fetch(uri, opts);
-    let js = await resp.json();
-    return js.id;
+    await resp.json();
   }
 
   async updateContentCache() {
@@ -454,7 +465,7 @@ export class StoreRemote extends StoreCommon {
     if (len(this.notes) > 0) {
       return this.notes;
     }
-    let logs = await this.storeGetLogs();
+    let logs = await this.storeGetLogs(0);
     if (len(logs) == 0) {
       return [];
     }
@@ -516,10 +527,11 @@ export class StoreRemote extends StoreCommon {
   async noteAddVersion(note, content) {
     let id = note.valueOf();
     let blob = utf8ToBlob(content);
-    let contentId = await this.storeSetContent(blob);
+    let contentId = makeRandomContentID(id);
+    await this.storeSetContent(blob, contentId);
     let e = mkLogChangeContent(id, contentId);
     await this.appendAndApplyLog(e);
-    this.kvContentCache.set(contentId, blob);
+    await this.kvContentCache.set(contentId, blob);
   }
 
   getTitle(note) {

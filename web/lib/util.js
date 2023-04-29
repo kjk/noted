@@ -513,14 +513,6 @@ export function genRandomID(n) {
   return nanoid(n);
 }
 
-export function genRandomNoteID() {
-  return nanoid(6);
-}
-
-export function genRandomNoteContentID() {
-  return nanoid(12);
-}
-
 /**
  * split("a.b.c", "." 2) => ["a" "b.c"]
  * which is different from "a.b.c".split(".",2) => ["a", "b"]

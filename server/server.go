@@ -307,10 +307,6 @@ func postWithHeaders(uri string, hdrs map[string]string) (*http.Response, error)
 	return resp, err
 }
 
-func permRedirect(w http.ResponseWriter, r *http.Request, newURL string) {
-	http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
-}
-
 // in dev, proxyHandler redirects assets to vite web server
 // in prod, assets must be pre-built in web/dist directory
 func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
