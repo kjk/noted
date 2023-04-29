@@ -14,31 +14,27 @@
     changeToRemoteStore,
     changeToLocalStore,
     noteDelete,
+    noteGetLastModified,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
   import GitHub from "./icons/GitHub.svelte";
-  import {
-    githubUserInfo,
-    logout,
-    openLoginWindow,
-    setOnGitHubLogin,
-  } from "./lib/github_login";
+  import { userInfo, logout, getLoggedUser } from "./lib/login";
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
-  import { refreshGitHubTokenIfNeeded } from "./lib/github_login";
   import CommandPalette, {
     kSelectedCommand,
     kSelectedName,
   } from "./CommandPalette.svelte";
   import browser from "./lib/browser";
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
+  import { log } from "./lib/log";
 
   let commandPalettePageNames = [];
   let commandPaletteCommands = ["Delete Note"];
   let commadnPaletteSearchTerm = "";
   let showingCommandPalette = false;
   let onCommandPaletteSelected = (kind, idx, item) => {
-    console.log("onCommandPaletteSelected:", kind, idx, item);
+    log("onCommandPaletteSelected:", kind, idx, item);
   };
 
   let cmdPaletteShortcut = "<tt>Ctrl + K</tt>";
@@ -78,7 +74,7 @@
     if (prevTitle === title) {
       return;
     }
-    console.log(`titleChanged: '${prevTitle}' => '${title}'`);
+    log(`titleChanged: '${prevTitle}' => '${title}'`);
     noteSetTitle(note, title);
     notes = notes;
   }
@@ -87,7 +83,7 @@
     if (!note) {
       return;
     }
-    console.log("noteChanged:", note);
+    log("noteChanged:", note);
     title = noteGetTitle(note);
     let s = await noteGetCurrentVersion(note);
     setEditorText(s);
@@ -110,7 +106,7 @@
   }
 
   async function deleteCurrentNote() {
-    console.log("deleteCurrentNote:", note);
+    log("deleteCurrentNote:", note);
     notes = await noteDelete(note);
     /** @type {Note} */
     let newNote = null;
@@ -124,7 +120,7 @@
   }
 
   async function onNoteOrCommandSelected(kind, idx, item) {
-    console.log("onNoteOrCommandSelected:", kind, idx, item);
+    log("onNoteOrCommandSelected:", kind, idx, item);
     if (kind === kSelectedName) {
       if (idx === -1) {
         await createNewNote(item);
@@ -133,7 +129,7 @@
         await openNote(n);
       }
     } else if (kind === kSelectedCommand) {
-      console.log("command:", item);
+      log("command:", item);
       if (item === "Delete Note") {
         await deleteCurrentNote();
       }
@@ -144,7 +140,7 @@
   }
 
   async function runCommandPalette(startWithCommands) {
-    // console.log("selectPage");
+    // log("selectPage");
     let nNotes = len(notes);
     commandPalettePageNames.length = nNotes;
     for (let i = 0; i < nNotes; i++) {
@@ -240,7 +236,7 @@
   }
 
   async function createNewNote(title = "") {
-    console.log("createNewNote");
+    log("createNewNote");
     let n = await newNote(title);
     await openNote(n);
     if (title === "") {
@@ -249,13 +245,8 @@
     notes = await getNotes();
   }
 
-  async function loginGitHub() {
-    console.log("loginGitHub");
-    openLoginWindow();
-  }
-
   async function logoutGitHub() {
-    console.log("logoutGitHub");
+    log("logoutGitHub");
     logout();
     changeToLocalStore();
     await setLastNote();
@@ -265,20 +256,21 @@
    * @param {Note} n
    */
   async function openNote(n) {
-    console.log("openNote:", n, n ? noteGetTitle(n) : "");
+    log("openNote:", n, n ? noteGetTitle(n) : "");
+    if (!n) {
+      note = null;
+      editor.currentNote = null;
+      return;
+    }
     if (note === n) {
-      if (n) {
-        editor.focus();
-      }
+      editor.focus();
       return;
     }
     // pre-cache the note content to avoid visible switch
-    if (n) {
-      await noteGetCurrentVersion(n);
-    }
+    await noteGetCurrentVersion(n);
     note = n;
     editor.currentNote = n;
-    if (n) {
+    if (noteGetTitle(n) !== "") {
       editor.focus();
     }
   }
@@ -286,7 +278,7 @@
   async function setLastNote() {
     notes = await getNotes();
     let nNotes = len(notes);
-    console.log("notes:", nNotes);
+    log("notes:", nNotes);
     if (nNotes === 0) {
       await createNewNote();
     } else {
@@ -295,11 +287,44 @@
     }
   }
 
-  async function doOnGitHubLogin() {
-    console.log("doOnGitHubLogin");
-    await openNote(null);
-    changeToRemoteStore();
-    await setLastNote();
+  async function setLastModifiedNote() {
+    notes = await getNotes();
+    let nNotes = len(notes);
+    log("notes:", nNotes);
+    if (nNotes === 0) {
+      await createNewNote();
+    } else {
+      // TODO: could optimize by doing a single scan
+      let currNote = pickLastModifiedNote(notes);
+      await openNote(currNote);
+    }
+  }
+
+  /**
+   * @param {Note[]} notes
+   * @returns {Note}
+   */
+  function pickLastModifiedNote(notes) {
+    let time = 0;
+    let res = null;
+    for (let n of notes) {
+      let t = noteGetLastModified(n);
+      if (t > time) {
+        time = t;
+        res = n;
+      }
+    }
+    return res;
+  }
+
+  function sortNotesByLastModified(notes) {
+    let res = [...notes];
+    res.sort((a, b) => {
+      let aTime = noteGetLastModified(a);
+      let bTime = noteGetLastModified(b);
+      return aTime - bTime;
+    });
+    return res;
   }
 
   /**
@@ -309,7 +334,7 @@
   async function loadNoteByName(name) {
     // TODO: implement state restoration logic
     let stateWasRestored = true;
-    console.log("loadNoteByName:", name);
+    log("loadNoteByName:", name);
     let notes = await getNotes();
     for (let n of notes) {
       let title = noteGetTitle(n);
@@ -321,23 +346,39 @@
     return stateWasRestored;
   }
 
-  onMount(async () => {
-    console.log("onMount");
-    setOnGitHubLogin(doOnGitHubLogin);
-    refreshGitHubTokenIfNeeded();
+  async function useLocalStore() {
+    log("useLocalStore");
+    // TODO: clewar remote store cache
+    changeToLocalStore();
+  }
 
+  async function useRemoteStore() {
+    // TODO: clear local store data
+    changeToRemoteStore();
+  }
+
+  onMount(async () => {
+    log("Noted onMount");
+
+    let user = await getLoggedUser();
+    log("user:", user);
+    if (user == null) {
+      await useLocalStore();
+    } else {
+      await useRemoteStore();
+    }
     notes = await getNotes();
     let nNotes = len(notes);
-    console.log("notes:", nNotes);
+    log("notes:", nNotes);
 
     editor = new Editor(editorElement);
     editor.loadPage = loadNoteByName;
-    console.log("editor:", editor);
+    log("editor:", editor);
     setEditor(editor);
     editor.docChanged = debounce(handleDocChanged, 1000);
     document.addEventListener("keydown", onKeyDown);
 
-    await setLastNote();
+    await setLastModifiedNote();
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
@@ -388,18 +429,20 @@
       >new note</button
     >
 
-    {#if $githubUserInfo}
+    {#if $userInfo}
       <div
         class="relative group flex items-center gap-x-2 hover:bg-gray-100 cursor-pointer px-2 ml-2 py-1"
       >
-        <img
-          class="avatar"
-          src={$githubUserInfo.avatar_url}
-          width="20"
-          height="20"
-          alt="kjk"
-        />
-        <div class="text-sm">{$githubUserInfo.login}</div>
+        {#if $userInfo.avatar_url}
+          <img
+            class="avatar"
+            src={$userInfo.avatar_url}
+            width="20"
+            height="20"
+            alt="kjk"
+          />
+        {/if}
+        <div class="text-sm">{$userInfo.login}</div>
         <div class="mt-1 text-gray-700">
           <SvgArrowDown class="w-2 h-2" />
           <div
@@ -413,12 +456,12 @@
         </div>
       </div>
     {:else}
-      <button
+      <a
         use:gtooltip={"LogIn with GitHub"}
-        on:click={loginGitHub}
+        href="/auth/ghlogin"
         class="relative flex items-center text-sm border ml-2 border-gray-500 hover:bg-gray-100 rounded-md py-0.5 px-2"
         ><GitHub class="mt-[1px]" />
-        <div class="ml-1.5">login</div></button
+        <div class="ml-1.5">login</div></a
       >
     {/if}
   </div>

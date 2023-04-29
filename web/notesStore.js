@@ -7,8 +7,6 @@ import {
   utf8ToBlob,
 } from "./lib/util";
 
-import { addToken } from "./lib/githubapi";
-
 const kLogEntriesPerKey = 1024;
 
 /*
@@ -313,7 +311,7 @@ export class StoreRemote extends StoreCommon {
 
   async storeGetLogs() {
     let uri = "/api/store/getLogs";
-    let opts = addToken({});
+    let opts = {};
     let resp = await fetch(uri, opts);
     let logs = await resp.json();
     return logs;
@@ -322,10 +320,10 @@ export class StoreRemote extends StoreCommon {
   async storeAppendLog(log) {
     console.log("storeAppendLog:", log);
     let uri = "/api/store/appendLog";
-    let opts = addToken({
+    let opts = {
       method: "POST",
       body: JSON.stringify(log),
-    });
+    };
     let resp = await fetch(uri, opts);
     let ok = await resp.json();
     return ok;
@@ -333,7 +331,7 @@ export class StoreRemote extends StoreCommon {
 
   async storeGetContent(id) {
     let uri = "/api/store/getContent?id=" + id;
-    let opts = addToken({});
+    let opts = {};
     let resp = await fetch(uri, opts);
     let value = await resp.blob();
     return value;
@@ -341,10 +339,10 @@ export class StoreRemote extends StoreCommon {
 
   async storeSetContent(value) {
     let uri = "/api/store/setContent";
-    let opts = addToken({
+    let opts = {
       method: "POST",
       body: value,
-    });
+    };
     let resp = await fetch(uri, opts);
     let js = await resp.json();
     return js.id;
@@ -443,7 +441,7 @@ function sortKeys(keys) {
 }
 
 /** @type {StoreLocal | StoreRemote} */
-export let store = new StoreLocal();
+export let store = null;
 
 export function changeToRemoteStore() {
   store = new StoreRemote();

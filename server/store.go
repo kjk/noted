@@ -266,7 +266,6 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 		}
 		emailToUserInfo[email] = userInfo
 	}
-	w.Header().Add("X-User-Info", email)
 	return userInfo, nil
 }
 

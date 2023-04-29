@@ -118,7 +118,7 @@ func main() {
 func startVite() func() {
 	cmd := exec.Command("npx", "vite", "--strictPort=true", "--clearScreen=false")
 	logf(ctx(), "> %s\n", cmd)
-	cmdLog(cmd)
+	// cmdLog(cmd)
 	err := cmd.Start()
 	must(err)
 	return func() {

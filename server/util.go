@@ -20,6 +20,7 @@ import (
 var (
 	must       = u.Must
 	panicIf    = u.PanicIf
+	panicIfErr = u.PanicIfErr
 	isWinOrMac = u.IsWinOrMac
 	formatSize = u.FormatSize
 )

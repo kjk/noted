@@ -1,3 +1,4 @@
+import { log } from "../lib/log.js";
 import { safeRun } from "../plugos/util.js";
 import { syntaxTree } from "../deps.js";
 const slashCommandRegexp = /([^\w:]|^)\/[\w\-]*/;
@@ -26,11 +27,11 @@ export class SlashCommandHook {
     }
   }
   add(name, def, func) {
-    console.log("SlashCommandHook.add:", def, "name:", name, "func:", func);
+    log("SlashCommandHook.add:", def, "name:", name, "func:", func.name);
     this.slashCommands.set(def.name, {
       slashCommand: def,
       run: () => {
-        console.log("running command:", def, "name:", name, "func:", func);
+        log("running command:", def, "name:", name, "func:", func);
         func(def);
       },
     });
@@ -41,7 +42,7 @@ export class SlashCommandHook {
     if (!prefix) {
       return null;
     }
-    console.log("slashCommandCompleter:", ctx, "prefix:", prefix);
+    log("slashCommandCompleter:", ctx, "prefix:", prefix);
     const prefixText = prefix.text;
     const options = [];
     const currentNode = syntaxTree(ctx.state).resolveInner(ctx.pos);

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/securecookie"
 	hutil "github.com/kjk/common/httputil"
+	"github.com/sanity-io/litter"
 
 	"github.com/kjk/common/server"
 	"github.com/kjk/common/u"
@@ -27,12 +29,22 @@ var (
 	cookieName   = "nckie" // noted cookie
 	secureCookie *securecookie.SecureCookie
 
+	cookieAuthKeyHexStr = "81615f1aed7f857b4cb9c539acb5f9b5a88c9d6c4e87a4141079490773d17f5b"
+	cookieEncrKeyHexStr = "00db6337a267be94a44813335bf3bd9e35868875b896fbe3758e613fbb8ec8d4"
+
 	httpPort    = 9236
 	proxyURLStr = "http://localhost:3047"
-	proxyURL    *url.URL
 	// maps ouath secret to login info
 	loginsInProress = map[string]string{}
 )
+
+func makeSecureCookie() {
+	cookieAuthKey, err := hex.DecodeString(cookieAuthKeyHexStr)
+	panicIfErr(err)
+	cookieEncrKey, err := hex.DecodeString(cookieEncrKeyHexStr)
+	panicIfErr(err)
+	secureCookie = securecookie.New(cookieAuthKey, cookieEncrKey)
+}
 
 func getGitHubSecrets() (string, string) {
 	if isDev() {
@@ -42,15 +54,18 @@ func getGitHubSecrets() (string, string) {
 }
 
 type SecureCookieValue struct {
-	User  string // "kjk"
-	Email string // "kkowalczyk@gmail.com"
+	User      string // "kjk"
+	Email     string // "kkowalczyk@gmail.com"
+	Name      string // Krzysztof Kowalczyk
+	AvatarURL string
 }
 
-func setSecureCookie(w http.ResponseWriter, cookieVal *SecureCookieValue) {
-	val := make(map[string]string)
-	val["user"] = cookieVal.User
-	val["email"] = cookieVal.Email
-	if encoded, err := secureCookie.Encode(cookieName, val); err == nil {
+func setSecureCookie(w http.ResponseWriter, c *SecureCookieValue) {
+	panicIf(c.User == "", "setSecureCookie: empty user")
+	panicIf(c.Email == "", "setSecureCookie: empty email")
+
+	logf(ctx(), "setSecureCookie: user: '%s', email: '%s'\n", c.User, c.Email)
+	if encoded, err := secureCookie.Encode(cookieName, c); err == nil {
 		// TODO: set expiration (Expires    time.Time) long time in the future?
 		cookie := &http.Cookie{
 			Name:  cookieName,
@@ -59,11 +74,12 @@ func setSecureCookie(w http.ResponseWriter, cookieVal *SecureCookieValue) {
 		}
 		http.SetCookie(w, cookie)
 	} else {
-		fmt.Printf("setSecureCookie(): error encoding secure cookie %s\n", err)
+		panicIfErr(err)
 	}
 }
 
-const WeekInSeconds = 60 * 60 * 24 * 7
+// TODO: make it even longer?
+const MonthInSeconds = 60 * 60 * 24 * 31
 
 // to delete the cookie value (e.g. for logging out), we need to set an
 // invalid value
@@ -71,59 +87,42 @@ func deleteSecureCookie(w http.ResponseWriter) {
 	cookie := &http.Cookie{
 		Name:   cookieName,
 		Value:  "deleted",
-		MaxAge: WeekInSeconds,
+		MaxAge: MonthInSeconds,
 		Path:   "/",
 	}
 	http.SetCookie(w, cookie)
 }
 
 func getSecureCookie(r *http.Request) *SecureCookieValue {
-	var ret *SecureCookieValue
-	if cookie, err := r.Cookie(cookieName); err == nil {
-		// detect a deleted cookie
-		if cookie.Value == "deleted" {
-			return nil
-		}
-		val := make(map[string]string)
-		if err = secureCookie.Decode(cookieName, cookie.Value, &val); err != nil {
-			// most likely expired cookie, so ignore. Ideally should delete the
-			// cookie, but that requires access to http.ResponseWriter, so not
-			// convenient for us
-			//fmt.Printf("Error decoding cookie %s\n", err)
-			return nil
-		}
-		//fmt.Printf("Got cookie %q\n", val)
-		ret = &SecureCookieValue{}
-		var ok bool
-		if ret.User, ok = val["user"]; !ok {
-			fmt.Printf("Error decoding cookie, no 'user' field\n")
-			return nil
-		}
+	var ret SecureCookieValue
+	cookie, err := r.Cookie(cookieName)
+	if err != nil {
+		return nil
 	}
-	return ret
-}
-
-func decodeUserFromCookie(r *http.Request) string {
-	cookie := getSecureCookie(r)
-	if nil == cookie {
-		return ""
+	// detect a deleted cookie
+	if cookie.Value == "deleted" {
+		return nil
 	}
-	return cookie.User
+	err = secureCookie.Decode(cookieName, cookie.Value, &ret)
+	if err != nil {
+		// most likely expired cookie, so ignore. Ideally should delete the
+		// cookie, but that requires access to http.ResponseWriter, so not
+		// convenient for us
+		return nil
+	}
+	panicIf(ret.User == "", "getSecureCookie: empty user")
+	panicIf(ret.Email == "", "getSecureCookie: empty email")
+	return &ret
 }
 
 var (
 	pongTxt = []byte("pong")
 )
 
-func logLogin(ctx context.Context, r *http.Request, accessToken string) {
-	ghToken := accessToken
-	_, user, err := getGitHubUserInfo(ghToken)
-	if err != nil {
-		logf(ctx, "getGitHubUserInfo(%s) faled with '%s'\n", ghToken, err)
+func logLogin(ctx context.Context, r *http.Request, user *GitHubUser) {
+	if user == nil || isDev() {
 		return
 	}
-	logf(ctx, "logLogin: user: %#v\n", user)
-	logf(ctx, "logLogin: logged in as GitHub user: %s\n", user.Login)
 	m := map[string]string{}
 	m["user"] = user.Login
 	m["email"] = user.Email
@@ -144,11 +143,10 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	redirectURL := strings.TrimSpace(r.FormValue("redirect"))
-	logf(ctx, "handleLoginGitHub: '%s', redirect: '%s'\n", r.RequestURI, redirectURL)
 	if redirectURL == "" {
 		redirectURL = "/"
-		return
 	}
+	logf(ctx, "handleLoginGitHub: '%s', redirect: '%s'\n", r.RequestURI, redirectURL)
 	clientID, _ := getGitHubSecrets()
 
 	// secret value passed to auth server and then back to us
@@ -203,7 +201,9 @@ func handleAuthUser(w http.ResponseWriter, r *http.Request) {
 		logf(ctx(), "handleAuthUser: not logged in\n")
 	} else {
 		v["user"] = cookie.User
+		v["login"] = cookie.User
 		v["email"] = cookie.Email
+		v["avatar_url"] = cookie.AvatarURL
 		logf(ctx(), "handleAuthUser: logged in as '%s', '%s'\n", cookie.User, cookie.Email)
 	}
 	serveJSONOK(w, r, v)
@@ -216,8 +216,8 @@ func handleAuthUser(w http.ResponseWriter, r *http.Request) {
 func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	logf(ctx(), "handleGithubCallback: '%s'\n", r.URL)
 	state := r.FormValue("state")
-	redirect := loginsInProress[state]
-	if redirect == "" {
+	redirectURL := loginsInProress[state]
+	if redirectURL == "" {
 		logErrorf(ctx(), "invalid oauth state, no redirect for state '%s'\n", state)
 		uri := "/github_login_failed?err=" + url.QueryEscape("invalid oauth state")
 		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
@@ -270,16 +270,20 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
 		return
 	}
-	user := i.Login
-	logf(ctx(), "github user: %s\n", user)
+	litter.Dump(i)
 	cookie := &SecureCookieValue{}
-	cookie.User = user
+	cookie.User = i.Login
+	cookie.Email = i.Email
+	cookie.Name = i.Name
+	cookie.AvatarURL = i.AvatarURL
+	litter.Dump(cookie)
+	logf(ctx(), "github user: '%s', email: '%s'\n", cookie.User, cookie.Email)
 	setSecureCookie(w, cookie)
-	logf(ctx(), "handleOauthGitHubCallback: redirect: '%s'\n", redirect)
-	http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
+	logf(ctx(), "handleOauthGitHubCallback: redirect: '%s'\n", redirectURL)
+	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 
 	// can't put in the background because that cancels ctx
-	logLogin(ctx(), r, access_token)
+	logLogin(ctx(), r, i)
 }
 
 func mapStr(m map[string]interface{}, key string) string {
@@ -310,6 +314,8 @@ func permRedirect(w http.ResponseWriter, r *http.Request, newURL string) {
 // in dev, proxyHandler redirects assets to vite web server
 // in prod, assets must be pre-built in web/dist directory
 func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
+	makeSecureCookie()
+
 	distDir := ""
 
 	if proxyHandler == nil {
@@ -412,6 +418,9 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 				logf(ctx(), "handlerWithMetrics: panicked with with %v\n", p)
 				errStr := fmt.Sprintf("Error: %v", p)
 				http.Error(w, errStr, http.StatusInternalServerError)
+				return
+			}
+			if isDev() {
 				return
 			}
 			logHTTPReq(r, m.Code, m.Written, m.Duration)
