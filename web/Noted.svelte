@@ -5,16 +5,16 @@
   import { debounce, len, pluralize, throwIf } from "./lib/util";
   import { onMount } from "svelte";
   import {
-    noteAddVersion,
-    noteGetCurrentVersion,
+    addNoteVersion,
+    getNoteLatestVersion,
     getNotes,
     newNote,
-    noteGetTitle,
-    noteSetTitle,
+    getNoteTitle,
+    setNoteTitle,
     changeToRemoteStore,
     changeToLocalStore,
-    noteDelete,
-    noteGetLastModified,
+    deleteNote,
+    getNoteLastModified,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -71,12 +71,12 @@
     if (!title || !note) {
       return;
     }
-    let prevTitle = noteGetTitle(note);
+    let prevTitle = getNoteTitle(note);
     if (prevTitle === title) {
       return;
     }
     log(`titleChanged: '${prevTitle}' => '${title}'`);
-    noteSetTitle(note, title);
+    setNoteTitle(note, title);
     notes = notes;
   }
 
@@ -85,14 +85,14 @@
       return;
     }
     log("noteChanged:", note);
-    title = noteGetTitle(note);
-    let s = await noteGetCurrentVersion(note);
+    title = getNoteTitle(note);
+    let s = await getNoteLatestVersion(note);
     setEditorText(s);
   }
 
   async function handleDocChanged(tr) {
     let s = editor.getText();
-    await noteAddVersion(note, s);
+    await addNoteVersion(note, s);
   }
 
   let flashMsg = "";
@@ -108,7 +108,7 @@
 
   async function deleteCurrentNote() {
     log("deleteCurrentNote:", note);
-    notes = await noteDelete(note);
+    notes = await deleteNote(note);
     /** @type {Note} */
     let newNote = null;
     if (len(notes) === 0) {
@@ -146,7 +146,7 @@
     commandPalettePageNames.length = nNotes;
     for (let i = 0; i < nNotes; i++) {
       let n = notes[i];
-      let title = noteGetTitle(n);
+      let title = getNoteTitle(n);
       commandPalettePageNames[i] = title;
     }
     onCommandPaletteSelected = onNoteOrCommandSelected;
@@ -257,7 +257,7 @@
    * @param {Note} n
    */
   async function openNote(n) {
-    log("openNote:", n, n ? noteGetTitle(n) : "");
+    log("openNote:", n, n ? getNoteTitle(n) : "");
     if (!n) {
       note = null;
       editor.currentNote = null;
@@ -268,10 +268,10 @@
       return;
     }
     // pre-cache the note content to avoid visible switch
-    await noteGetCurrentVersion(n);
+    await getNoteLatestVersion(n);
     note = n;
     editor.currentNote = n;
-    if (noteGetTitle(n) !== "") {
+    if (getNoteTitle(n) !== "") {
       editor.focus();
     }
   }
@@ -309,7 +309,7 @@
     let time = 0;
     let res = null;
     for (let n of notes) {
-      let t = noteGetLastModified(n);
+      let t = getNoteLastModified(n);
       if (t > time) {
         time = t;
         res = n;
@@ -321,8 +321,8 @@
   function sortNotesByLastModified(notes) {
     let res = [...notes];
     res.sort((a, b) => {
-      let aTime = noteGetLastModified(a);
-      let bTime = noteGetLastModified(b);
+      let aTime = getNoteLastModified(a);
+      let bTime = getNoteLastModified(b);
       return aTime - bTime;
     });
     return res;
@@ -338,7 +338,7 @@
     log("loadNoteByName:", name);
     let notes = await getNotes();
     for (let n of notes) {
-      let title = noteGetTitle(n);
+      let title = getNoteTitle(n);
       if (title === name) {
         await openNote(n);
         return stateWasRestored;

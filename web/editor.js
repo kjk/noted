@@ -72,10 +72,10 @@ import { editorSyscalls } from "./syscalls/editor.js";
 import { embedWidget } from "./plugs/core/embed.js";
 import { emojiCompleter } from "./plugs/emoji/emoji.js";
 import { focusEditorView } from "./lib/cmutil.js";
+import { getNoteTitle } from "./notesStore.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
-import { noteGetTitle } from "./notesStore.js";
 import { safeRun } from "./plugos/util.js";
 import { setEdiotrSyscall } from "./plug-api/silverbullet-syscall/editor.js";
 import { setMarkdownLang } from "./plug-api/silverbullet-syscall/markdown.js";
@@ -451,7 +451,7 @@ export class Editor {
   get currentPage() {
     let title = "";
     if (this.currentNote) {
-      title = noteGetTitle(this.currentNote);
+      title = getNoteTitle(this.currentNote);
     }
     console.log(`Editor.currentPage: '${title}'`);
     return title;

@@ -1,9 +1,9 @@
 // TODO: will need to implement methods
 
-import { getNotes, getNotesSync, noteGetLastModified } from "../../notesStore";
+import { getNoteLastModified, getNotes, getNotesSync } from "../../notesStore";
 
+import { getNoteTitle } from "../../notesStore";
 import { len } from "../../lib/util";
-import { noteGetTitle } from "../../notesStore";
 
 export class Space {
   async readPage(name) {
@@ -21,8 +21,8 @@ export class Space {
       */
 
   metaForNote(note) {
-    let title = noteGetTitle(note);
-    let lastModified = noteGetLastModified(note);
+    let title = getNoteTitle(note);
+    let lastModified = getNoteLastModified(note);
     let meta = {
       name: title,
       lastModified: lastModified,
@@ -51,7 +51,7 @@ export class Space {
     console.log("Space.getPageMeta:", name);
     let notes = getNotesSync();
     for (let note of notes) {
-      let title = noteGetTitle(note);
+      let title = getNoteTitle(note);
       if (title === name) {
         let meta = this.metaForNote(note);
         return meta;

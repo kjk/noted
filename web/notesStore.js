@@ -254,16 +254,36 @@ class StoreCommon {
     return res;
   }
 
-  getTitle(note) {
+  /**
+   * @param {Note} note
+   * @returns {string}
+   */
+  getNoteTitle(note) {
     return this.getValueAtIdx(note, kNoteIdxTitle);
   }
 
-  getLastModified(note) {
+  /**
+   * @param {Note} note
+   * @returns {number}
+   */
+  getNoteLastModified(note) {
     return this.getValueAtIdx(note, kNoteIdxUpdatedAt);
   }
 
-  getSize(note) {
+  /**
+   * @param {Note} note
+   * @returns {number}
+   */
+  getNoteSize(note) {
     return this.getValueAtIdx(note, kNoteIdxSize);
+  }
+
+  /**
+   * @param {Note} note
+   * @returns {string}
+   */
+  getNoteLatestVersionId(note) {
+    return this.getValueAtIdx(note, kNoteIdxLLatestVersionId);
   }
 }
 
@@ -363,10 +383,12 @@ export class StoreLocal extends StoreCommon {
     return note;
   }
 
-  async noteGetCurrentVersion(note) {
-    let id = note.valueOf();
-    let idx = this.notesMap.get(id);
-    let contentId = this.notesFlattened[idx + kNoteIdxLLatestVersionId];
+  /**
+   * @param {Note} note
+   * @returns {Promise<string>}
+   */
+  async getNoteLatestVersion(note) {
+    let contentId = this.getNoteLatestVersionId(note);
     if (!contentId) {
       return null;
     }
@@ -383,7 +405,7 @@ export class StoreLocal extends StoreCommon {
    * @param {Note} note
    * @param {string} content
    */
-  async noteAddVersion(note, content) {
+  async addNoteVersion(note, content) {
     let id = note.valueOf();
     let contentId = makeRandomContentID(id);
     let blob = utf8ToBlob(content);
@@ -397,7 +419,7 @@ export class StoreLocal extends StoreCommon {
    * @param {Note} note
    * @param {string} title
    */
-  async setTitle(note, title) {
+  async setNoteTitle(note, title) {
     let id = note.valueOf();
     let e = mkLogChangeTitle(id, title);
     await this.appendAndApplyLog(e);
@@ -501,7 +523,7 @@ export class StoreRemote extends StoreCommon {
     let missing = [];
 
     for (let note of this.notes) {
-      let contentID = this.getCurrentVersionId(note);
+      let contentID = this.getNoteLatestVersionId(note);
       if (!contentID) {
         log(`updateContentCache: note ${note} has no contentID`);
         continue;
@@ -610,23 +632,11 @@ export class StoreRemote extends StoreCommon {
   }
 
   /**
-   *
-   * @param {Note} note
-   * @returns {string}
-   */
-  getCurrentVersionId(note) {
-    let id = note.valueOf();
-    let idx = this.notesMap.get(id);
-    let contentId = this.notesFlattened[idx + kNoteIdxLLatestVersionId];
-    return contentId; // can be null
-  }
-
-  /**
    * @param {Note} note
    * @returns {Promise<string>}
    */
-  async noteGetCurrentVersion(note) {
-    let contentId = this.getCurrentVersionId(note);
+  async getNoteLatestVersion(note) {
+    let contentId = this.getNoteLatestVersionId(note);
     if (!contentId) {
       return null;
     }
@@ -639,7 +649,7 @@ export class StoreRemote extends StoreCommon {
     return s;
   }
 
-  async noteAddVersion(note, content) {
+  async addNoteVersion(note, content) {
     let id = note.valueOf();
     let contentId = makeRandomContentID(id);
     let blob = utf8ToBlob(content);
@@ -650,13 +660,7 @@ export class StoreRemote extends StoreCommon {
     await this.kvContentCache.set(contentId, blob);
   }
 
-  getTitle(note) {
-    let id = note.valueOf();
-    let idx = this.notesMap.get(id);
-    return this.notesFlattened[idx + kNoteIdxTitle];
-  }
-
-  async setTitle(note, title) {
+  async setNoteTitle(note, title) {
     let id = note.valueOf();
     let e = mkLogChangeTitle(id, title);
     await this.appendAndApplyLog(e);
@@ -697,39 +701,39 @@ export async function newNote(title, type = "md") {
   return store.newNote(title, type);
 }
 
-export async function noteAddVersion(note, content) {
-  let currContent = await store.noteGetCurrentVersion(note);
+export async function addNoteVersion(note, content) {
+  let currContent = await store.getNoteLatestVersion(note);
   if (currContent == content) {
     log("skipping addVersion, content is the same");
     return;
   }
-  return store.noteAddVersion(note, content);
+  return store.addNoteVersion(note, content);
 }
 
-export function noteGetTitle(note) {
-  return store.getTitle(note);
+export function getNoteTitle(note) {
+  return store.getNoteTitle(note);
 }
 
-export function noteSetTitle(note, title) {
-  let currTitle = store.getTitle(note);
+export function setNoteTitle(note, title) {
+  let currTitle = store.getNoteTitle(note);
   if (currTitle == title) {
     return;
   }
-  return store.setTitle(note, title);
+  return store.setNoteTitle(note, title);
 }
 
-export async function noteDelete(note) {
+export async function deleteNote(note) {
   return store.deleteNote(note);
 }
 
-export function noteGetCurrentVersion(note) {
-  return store.noteGetCurrentVersion(note);
+export function getNoteLatestVersion(note) {
+  return store.getNoteLatestVersion(note);
 }
 
-export function noteGetLastModified(note) {
-  return store.getLastModified(note);
+export function getNoteLastModified(note) {
+  return store.getNoteLastModified(note);
 }
 
-export function noteGetSize(note) {
-  return store.getSize(note);
+export function getNoteSize(note) {
+  return store.getNoteSize(note);
 }
