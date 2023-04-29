@@ -55,6 +55,19 @@ const kNoteIdxCreatedAt = 5;
 const kNoteIdxUpdatedAt = 6;
 const kNoteFieldsCount = 7;
 
+function logEntrySame(e1, e2) {
+  let n = len(e1);
+  if (n !== len(e2)) {
+    return false;
+  }
+  for (let i = 0; i < n; i++) {
+    if (e1[i] !== e2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // each log entry is an array
 // first element is kind of an op
 // second is time in milliseconds since epoch (jan 1 1970 UTC)
@@ -99,19 +112,11 @@ class StoreCommon {
   notes = [];
 
   /**
-   * @param {string} id
+   * @param {any[]} e
+   * @returns {any}
    */
-  deleteNoteById(id) {
-    // log("deleteNoteById:", id);
-    // let idx = this.notesMap.get(id);
-    // this.notesFlattened.splice(idx, 1);
-    this.notesMap.delete(id);
-    // TODO: make faster. we can rewrite the array in place
-    this.notes = this.notes.filter((n) => n.valueOf() != id);
-  }
-
   applyLog(e) {
-    // log("applyLog", log);
+    // log("applyLog", e);
     let op = e[0];
     let createdAt = e[1];
     let updatedAt = createdAt;
@@ -176,7 +181,21 @@ class StoreCommon {
       this.notesFlattened[idx + kNoteIdxKind] = kind;
       this.notesFlattened[idx + kNoteIdxUpdatedAt] = updatedAt;
     } else if (op === kLogDeleteNote) {
-      this.deleteNoteById(id);
+      // log("deleteNoteById:", id);
+      this.notesMap.delete(id);
+      // rewrite in place for perf
+      let nNotes = len(this.notes);
+      let curr = 0;
+      for (let note of this.notes) {
+        let noteID = note.valueOf();
+        if (noteID === id) {
+          continue;
+        }
+        this.notes[curr] = note;
+        curr++;
+      }
+      this.notes.length = nNotes - 1;
+      return this.notes;
     } else {
       throw new Error(`unknown log op ${op}`);
     }
@@ -189,7 +208,9 @@ class StoreCommon {
   getTitle(note) {
     let id = note.valueOf();
     let idx = this.notesMap.get(id);
-    return this.notesFlattened[idx + kNoteIdxTitle];
+    let title = this.notesFlattened[idx + kNoteIdxTitle];
+    // log(`getTitle: id: ${id}, idx: ${idx}, title: ${title}`);
+    return title;
   }
 
   getLastModified(note) {
@@ -197,6 +218,15 @@ class StoreCommon {
     let idx = store.notesMap.get(id);
     return store.notesFlattened[idx + kNoteIdxUpdatedAt];
   }
+}
+
+// log keys are in format `log:${num}`
+function sortLogKeys(keys) {
+  keys.sort((a, b) => {
+    let aNum = parseInt(a.substr(4));
+    let bNum = parseInt(b.substr(4));
+    return aNum - bNum;
+  });
 }
 
 export class StoreLocal extends StoreCommon {
@@ -209,16 +239,16 @@ export class StoreLocal extends StoreCommon {
   // database for storing log entries under multiple keys
   // we store kLogEntriesPerKey in each key
   /** @type {KV} */
-  kvNotes;
+  kvLogs;
 
   currKey = "log:0";
   currLogs = [];
 
   constructor() {
     super();
-    this.db = createKVStoresDB("noted2", ["content", "notes"]);
+    this.db = createKVStoresDB("noted-local", ["content", "logs"]);
     this.kvContent = new KV(this.db, "content");
-    this.kvNotes = new KV(this.db, "notes");
+    this.kvLogs = new KV(this.db, "logs");
   }
 
   /**
@@ -228,16 +258,16 @@ export class StoreLocal extends StoreCommon {
     if (len(this.notes) > 0) {
       return this.notes;
     }
-    let keys = await this.kvNotes.keys();
+    let keys = await this.kvLogs.keys();
     if (len(keys) == 0) {
       return [];
     }
-    sortKeys(keys);
+    sortLogKeys(keys);
     for (let key of keys) {
       // log("key:", key);
       // @ts-ignore
       this.currKey = key;
-      this.currLogs = await this.kvNotes.get(key);
+      this.currLogs = await this.kvLogs.get(key);
       for (let log of this.currLogs) {
         this.applyLog(log);
       }
@@ -245,11 +275,15 @@ export class StoreLocal extends StoreCommon {
     return this.notes;
   }
 
-  async appendLog(log) {
-    // log("appendLog:", log, "size:", len(this.currLogs));
-    this.currLogs.push(log);
+  /**
+   * @param {any[]} e
+   * @returns {Promise<any>}
+   */
+  async appendAndApplyLog(e) {
+    // log("appendLog:", e, "size:", len(this.currLogs));
+    this.currLogs.push(e);
     // log("currLogs:", this.currLogs);
-    await this.kvNotes.set(this.currKey, this.currLogs);
+    await this.kvLogs.set(this.currKey, this.currLogs);
     let nLogs = len(this.currLogs);
     if (nLogs >= kLogEntriesPerKey) {
       let currId = parseInt(this.currKey.substring(4));
@@ -258,12 +292,12 @@ export class StoreLocal extends StoreCommon {
       log("newKey:", this.currKey);
       this.currLogs = [];
     }
+    return this.applyLog(e);
   }
 
   async newNote(title, type = "md") {
-    let log = mkLogCreateNote(title, type);
-    await this.appendLog(log);
-    let note = this.applyLog(log);
+    let e = mkLogCreateNote(title, type);
+    let note = await this.appendAndApplyLog(e);
     // log("newNote:", note);
     return note;
   }
@@ -281,15 +315,15 @@ export class StoreLocal extends StoreCommon {
   async noteAddVersion(note, content) {
     let id = note.valueOf();
     let contentId = genRandomNoteContentID();
-    let log = mkLogChangeContent(id, contentId);
+    let e = mkLogChangeContent(id, contentId);
     await this.kvContent.set(contentId, content);
-    await this.appendLog(log);
+    await this.appendAndApplyLog(e);
   }
 
   async setTitle(note, title) {
     let id = note.valueOf();
-    let log = mkLogChangeTitle(id, title);
-    await this.appendLog(log);
+    let e = mkLogChangeTitle(id, title);
+    await this.appendAndApplyLog(e);
   }
 
   /**
@@ -298,18 +332,33 @@ export class StoreLocal extends StoreCommon {
    */
   async deleteNote(note) {
     let id = note.valueOf();
-    let log = mkLogDeleteNote(id);
-    await this.appendLog(log);
-    this.deleteNoteById(id);
-    return this.notes;
+    let e = mkLogDeleteNote(id);
+    let notes = await this.appendAndApplyLog(e);
+    return notes;
   }
 }
 
 export class StoreRemote extends StoreCommon {
-  /** @type {Map<string, Blob>} */
-  content = new Map();
+  db;
+  // database for storing content of notes
+  // the key is random 12-byte id and the value is
+  // string or binary content
+  /** @type {KV} */
+  kvContentCache;
+
   constructor() {
     super();
+
+    this.db = createKVStoresDB("noted-remote", [
+      "content-cache",
+      "logs-cache",
+
+      "content-temp",
+      "logs-temp",
+    ]);
+
+    this.kvContentCache = new KV(this.db, "content-cache");
+    this.kvLogsCache = new KV(this.db, "logs-cache");
   }
 
   async storeGetLogs() {
@@ -356,6 +405,48 @@ export class StoreRemote extends StoreCommon {
     return js.id;
   }
 
+  async updateContentCache() {
+    let elapsed = startTimer();
+    let ids = await this.kvContentCache.keys();
+    log(
+      `updateContentCache: ${len(ids)} cached blobs for ${len(
+        this.notes
+      )} notes`
+    );
+    let existing = new Map();
+    for (let id of ids) {
+      existing.set(id, true);
+    }
+    let missing = [];
+
+    for (let note of this.notes) {
+      let contentID = this.getCurrentVersionId(note);
+      if (!contentID) {
+        log(`updateContentCache: note ${note} has no contentID`);
+        continue;
+      }
+      if (existing.has(contentID)) {
+        existing.delete(contentID);
+      } else {
+        missing.push(contentID);
+      }
+    }
+    let toDelete = [...existing.keys()];
+    log(
+      `updateContentCache: ${len(missing)} missing blobs, ${len(
+        toDelete
+      )} toDelete blobs`
+    );
+    for (let id of toDelete) {
+      await this.kvContentCache.del(id);
+    }
+    for (let id of missing) {
+      let blob = await this.storeGetContent(id);
+      await this.kvContentCache.set(id, blob);
+    }
+    log(`updateContentCache: took ${elapsed()} ms`);
+  }
+
   /**
    * @returns {Promise<Note[]>}
    */
@@ -369,41 +460,54 @@ export class StoreRemote extends StoreCommon {
     }
     log(`getNotes: ${len(logs)} log entries`);
     let elapsed = startTimer();
-    for (let log of logs) {
-      this.applyLog(log);
+    for (let e of logs) {
+      this.applyLog(e);
     }
     log(`getNotes: applyLog took ${elapsed()} ms`);
+    await this.updateContentCache();
     return this.notes;
   }
 
-  async appendLog(log) {
+  async appendAndApplyLog(e) {
     // log("appendLog:", log, "size:", len(this.currLogs));
     // log("currLogs:", this.currLogs);
     // log("appendLog:", log);
-    await this.storeAppendLog(log);
-    return this.applyLog(log);
+    await this.storeAppendLog(e);
+    return this.applyLog(e);
   }
 
   async newNote(title, type = "md") {
     let e = mkLogCreateNote(title, type);
-    let note = await this.appendLog(e);
+    let note = await this.appendAndApplyLog(e);
     log("newNote:", note);
     return note;
   }
 
-  async noteGetCurrentVersion(note) {
+  /**
+   *
+   * @param {Note} note
+   * @returns {string}
+   */
+  getCurrentVersionId(note) {
     let id = note.valueOf();
     let idx = this.notesMap.get(id);
     let contentId = this.notesFlattened[idx + kNoteIdxLLatestVersionId];
+    return contentId; // can be null
+  }
+
+  /**
+   * @param {Note} note
+   * @returns {Promise<string>}
+   */
+  async noteGetCurrentVersion(note) {
+    let contentId = this.getCurrentVersionId(note);
     if (!contentId) {
       return null;
     }
-    let blob;
-    if (this.content.has(contentId)) {
-      blob = this.content.get(contentId);
-    } else {
+    let blob = await this.kvContentCache.get(contentId);
+    if (!blob) {
       blob = await this.storeGetContent(contentId);
-      this.content.set(contentId, blob);
+      this.kvContentCache.set(contentId, blob);
     }
     let s = await blobToUtf8(blob);
     return s;
@@ -413,9 +517,9 @@ export class StoreRemote extends StoreCommon {
     let id = note.valueOf();
     let blob = utf8ToBlob(content);
     let contentId = await this.storeSetContent(blob);
-    let log = mkLogChangeContent(id, contentId);
-    await this.appendLog(log);
-    this.content.set(contentId, blob);
+    let e = mkLogChangeContent(id, contentId);
+    await this.appendAndApplyLog(e);
+    this.kvContentCache.set(contentId, blob);
   }
 
   getTitle(note) {
@@ -426,8 +530,8 @@ export class StoreRemote extends StoreCommon {
 
   async setTitle(note, title) {
     let id = note.valueOf();
-    let log = mkLogChangeTitle(id, title);
-    await this.appendLog(log);
+    let e = mkLogChangeTitle(id, title);
+    await this.appendAndApplyLog(e);
   }
 
   /**
@@ -436,18 +540,10 @@ export class StoreRemote extends StoreCommon {
    */
   async deleteNote(note) {
     let id = note.valueOf();
-    let log = mkLogDeleteNote(id);
-    await this.appendLog(log);
-    return this.notes;
+    let e = mkLogDeleteNote(id);
+    let notes = await this.appendAndApplyLog(e);
+    return notes;
   }
-}
-
-function sortKeys(keys) {
-  keys.sort((a, b) => {
-    let aNum = parseInt(a.substr(4));
-    let bNum = parseInt(b.substr(4));
-    return aNum - bNum;
-  });
 }
 
 /** @type {StoreLocal | StoreRemote} */

@@ -34,28 +34,53 @@ export class KV {
     // console.log(res);
     return res;
   }
+
+  /**
+   * @param {string} key
+   * @returns {Promise<any>}
+   */
   async get(key) {
     let db = await this.getDb();
     return db.get(this.storeName, key);
   }
+
+  /**
+   * overwrites if already exists
+   * @param {string} key
+   * @param {any} val
+   */
   async set(key, val) {
     let db = await this.getDb();
     return db.put(this.storeName, val, key);
   }
 
-  // rejects if already exists
+  /**
+   * rejects if already exists
+   * @param {string} key
+   * @param {any} val
+   */
   async add(key, val) {
     let db = await this.getDb();
     return db.add(this.storeName, val, key);
   }
+
+  /**
+   * @param {string} key
+   * @returns
+   */
   async del(key) {
     let db = await this.getDb();
     return db.delete(this.storeName, key);
   }
+
   async clear() {
     let db = await this.getDb();
     return db.clear(this.storeName);
   }
+
+  /**
+   * @returns {Promise<string[]>}
+   */
   async keys() {
     let db = await this.getDb();
     return db.getAllKeys(this.storeName);
