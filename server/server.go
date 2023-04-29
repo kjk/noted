@@ -176,7 +176,7 @@ func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	cookie := getSecureCookie(r)
 	if cookie == nil {
 		logf(ctx, "handleLogoutGitHub: no cookie\n")
-		http.Error(w, "no cookie", http.StatusBadRequest)
+		serveError(w, "no cookie", http.StatusBadRequest)
 		return
 	}
 	email := cookie.Email
@@ -413,7 +413,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			if p := recover(); p != nil {
 				logf(ctx(), "handlerWithMetrics: panicked with with %v\n", p)
 				errStr := fmt.Sprintf("Error: %v", p)
-				http.Error(w, errStr, http.StatusInternalServerError)
+				serveError(w, errStr, http.StatusInternalServerError)
 				return
 			}
 			if isDev() {

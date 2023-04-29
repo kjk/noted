@@ -78,11 +78,16 @@ func listR2Files() {
 
 func serveIfError(w http.ResponseWriter, err error) bool {
 	if err != nil {
-		logf(ctx(), "serveIfError(): %s\n", err)
+		logErrorf(ctx(), "serveIfError(): %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return true
 	}
 	return false
+}
+
+func serveError(w http.ResponseWriter, s string, code int) {
+	logErrorf(ctx(), "%s\n", s)
+	http.Error(w, s, code)
 }
 
 func getLogKeyNo(s string) (int, error) {
@@ -234,7 +239,7 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 
 func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != "POST" && r.Method != "PUT" {
-		http.Error(w, "only POST and PUT supported", http.StatusBadRequest)
+		serveError(w, "only POST and PUT supported", http.StatusBadRequest)
 		return false
 	}
 	return true
@@ -342,7 +347,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 	if uri == "/api/store/getContent" {
 		id := r.URL.Query().Get("id")
 		if id == "" {
-			http.Error(w, "id is required", http.StatusBadRequest)
+			serveError(w, "id is required", http.StatusBadRequest)
 			return
 		}
 		obj, err := contentGet(userID, id)
@@ -361,7 +366,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		}
 		contentID := r.URL.Query().Get("id")
 		if len(contentID) < 6 {
-			http.Error(w, "id must be at least 6 chars", http.StatusBadRequest)
+			serveError(w, "id must be at least 6 chars", http.StatusBadRequest)
 		}
 		err = contentPut(userID, contentID, r.Body)
 		if !serveIfError(w, err) {
