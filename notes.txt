@@ -1,38 +1,3 @@
 https://www.npmjs.com/package/idb
 
---- notepad2
-
-"editor.getCursor": (): number => {
-  return editor.editorView!.state.selection.main.from;
-},
-"editor.getSelection": (): { from: number; to: number } => {
-  return editor.editorView!.state.selection.main;
-},
-
-Text.lineAt(pos)
-
-So to get cursor line / char:
-
-let cursor = editorView.state.selection.main.from;
-let line = editorView.state.doc.lineAt(cursor);
-let lineNo = line.number;
-let charNo = cursor - line.from;
-
-
-Things present in notepad2 but not in notepad2web:
-* Exit menu and toolbar icon
-* Alt-F11 shortcut for toggle menu
-* zoom in / out : using browser zooming instead
-
-The reason for those are restrictions of the browser.
-Some keyboard shortcuts cannot be intercepted.
-Some functionality is not available in the browser.
-Some functionality can't be implemented in Code Mirror.
-Some functionality is too hard to implement in Code Mirror.
-
-Specific things:
-
-IDM_VIEW_HIGHLIGHTCURRENTLINE_SUBLINE - when line is wrapped, Scintilla has an option (turned by default) to only highlight the first line of wrapped line. CodeMirror doesn't have that
-
-IDM_VIEW_HIGHLIGHTCURRENT_BLOCK - CodeMirror doesn't do that
----
+updateContentCache: took 12164 ms

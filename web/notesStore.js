@@ -521,8 +521,15 @@ export class StoreRemote extends StoreCommon {
     for (let id of toDelete) {
       await this.kvContentCache.del(id);
     }
+    let blobPromises = [];
     for (let id of missing) {
-      let blob = await this.storeGetContent(id);
+      let p = this.storeGetContent(id);
+      blobPromises.push(p);
+    }
+    let n = len(missing);
+    for (let i = 0; i < n; i++) {
+      let blob = await blobPromises[i];
+      let id = missing[i];
       await this.kvContentCache.set(id, blob);
     }
     log(`updateContentCache: took ${elapsed()} ms`);
