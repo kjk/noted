@@ -276,6 +276,22 @@ function sortLogKeys(keys) {
   });
 }
 
+async function getKVLogs(kvLogs) {
+  let keys = await kvLogs.keys();
+  if (len(keys) == 0) {
+    return null;
+  }
+  sortLogKeys(keys);
+  let res = [];
+  for (let key of keys) {
+    // log("key:", key);
+    // @ts-ignore
+    let logs = await kvLogs.get(key);
+    res.push([key, logs]);
+  }
+  return res;
+}
+
 export class StoreLocal extends StoreCommon {
   db;
   // database for storing content of notes
@@ -305,16 +321,14 @@ export class StoreLocal extends StoreCommon {
     if (len(this.notes) > 0) {
       return this.notes;
     }
-    let keys = await this.kvLogs.keys();
-    if (len(keys) == 0) {
+
+    let a = await getKVLogs(this.kvLogs);
+    if (a === null) {
       return [];
     }
-    sortLogKeys(keys);
-    for (let key of keys) {
-      // log("key:", key);
-      // @ts-ignore
-      this.currKey = key;
-      this.currLogs = await this.kvLogs.get(key);
+    for (let e of a) {
+      this.currKey = e[0];
+      this.currLogs = e[1];
       for (let log of this.currLogs) {
         this.applyLog(log);
       }
@@ -408,6 +422,8 @@ export class StoreRemote extends StoreCommon {
   // string or binary content
   /** @type {KV} */
   kvContentCache;
+  /** @type {KV} */
+  kvLogsCache;
 
   constructor() {
     super();
@@ -519,15 +535,53 @@ export class StoreRemote extends StoreCommon {
     if (len(this.notes) > 0) {
       return this.notes;
     }
-    let logs = await this.storeGetLogs(0);
-    if (len(logs) == 0) {
+
+    let start = 0;
+    let a = await getKVLogs(this.kvLogsCache);
+    let allLogs = [];
+    if (a !== null) {
+      for (let e of a) {
+        let logs = e[1];
+        start += len(logs);
+        allLogs.push(...logs);
+      }
+    }
+
+    // TODO: ask for start - 1, compare last log entry we have
+    // with the first one we get from the server, if they are
+    // different, we need to reget everything as it means
+    // we got out of sync with the server
+    let logsFromServer = await this.storeGetLogs(start);
+    if (start + len(logsFromServer) == 0) {
       return [];
     }
-    log(`getNotes: ${len(logs)} log entries`);
+    log(`getNotes: start: ${start}, logs from server: ${len(logsFromServer)} `);
+    allLogs.push(...logsFromServer);
     let elapsed = startTimer();
-    for (let e of logs) {
+    for (let e of allLogs) {
       this.applyLog(e);
     }
+    let logsPerKey = [];
+    if (len(logsFromServer) > 0) {
+      log(`getNotes: re-saving log entries in cache`);
+      while (len(allLogs) > kLogEntriesPerKey) {
+        let logs = allLogs.splice(0, kLogEntriesPerKey);
+        logsPerKey.push(logs);
+      }
+      if (len(allLogs) > 0) {
+        logsPerKey.push(allLogs);
+      }
+    }
+    let keyNo = 0;
+    for (let logs of logsPerKey) {
+      let key = "log:" + keyNo;
+      await this.kvLogsCache.set(key, logs);
+      log(
+        `getNotes: saved ${len(logs)} log entries in cache under key: ${key}`
+      );
+      keyNo++;
+    }
+
     log(`getNotes: applyLog took ${elapsed()} ms`);
     await this.updateContentCache();
     return this.notes;
