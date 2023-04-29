@@ -4,6 +4,7 @@ import {
   genRandomNoteContentID,
   genRandomNoteID,
   len,
+  startTimer,
   utf8ToBlob,
 } from "./lib/util";
 
@@ -312,15 +313,17 @@ export class StoreRemote extends StoreCommon {
   }
 
   async storeGetLogs() {
+    let elapsed = startTimer();
     let uri = "/api/store/getLogs";
     let opts = {};
     let resp = await fetch(uri, opts);
     let logs = await resp.json();
+    log(`storeGetLogs: ${len(logs)} log entries, took ${elapsed()} ms`);
     return logs;
   }
 
   async storeAppendLog(e) {
-    log("storeAppendLog:", e);
+    let elapsed = startTimer();
     let uri = "/api/store/appendLog";
     let opts = {
       method: "POST",
@@ -328,15 +331,18 @@ export class StoreRemote extends StoreCommon {
     };
     let resp = await fetch(uri, opts);
     let ok = await resp.json();
+    log(`storeAppendLog: took ${elapsed()} ms`, e);
     return ok;
   }
 
   async storeGetContent(id) {
+    let elapsed = startTimer();
     let uri = "/api/store/getContent?id=" + id;
     let opts = {};
     let resp = await fetch(uri, opts);
-    let value = await resp.blob();
-    return value;
+    let blob = await resp.blob();
+    log(`storeGetContent: took ${elapsed()} ms`, id, blob.size);
+    return blob;
   }
 
   async storeSetContent(value) {
@@ -362,9 +368,11 @@ export class StoreRemote extends StoreCommon {
       return [];
     }
     log(`getNotes: ${len(logs)} log entries`);
+    let elapsed = startTimer();
     for (let log of logs) {
       this.applyLog(log);
     }
+    log(`getNotes: applyLog took ${elapsed()} ms`);
     return this.notes;
   }
 
