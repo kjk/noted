@@ -5,7 +5,7 @@ import { directiveRegex } from "./directives.js";
 import { extractFrontmatter } from "../../plug-api/lib/frontmatter.js";
 import { queryRegex } from "../../plug-api/lib/query.js";
 import { renderToText } from "../../plug-api/lib/tree.js";
-import { replaceAsync } from "$sb/lib/util.js";
+import { replaceAsync } from "../../plug-api/lib/util.js";
 import { replaceTemplateVars } from "../core/template.js";
 import { serverUpdateDirectives } from "./command.js";
 
