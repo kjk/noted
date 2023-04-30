@@ -12,11 +12,6 @@
         "name": "Editor: Toggle Dark Mode"
       }
     },
-    "clearPageIndex": {
-      "path": "./page.ts:clearPageIndex",
-      "env": "server",
-      "events": ["page:saved", "page:deleted"]
-    },
     "pageQueryProvider": {
       "path": "./page.ts:pageQueryProvider",
       "events": ["query:page"]
@@ -31,11 +26,6 @@
         "name": "Space: Reindex"
       }
     },
-    "reindexSpace": {
-      "path": "./page.ts:reindexSpace",
-      "env": "server"
-    },
-
     "attachmentQueryProvider": {
       "path": "./attachment.ts:attachmentQueryProvider",
       "events": ["query:attachment"]
@@ -107,28 +97,6 @@
         "key": "Ctrl-Shift-f",
         "mac": "Cmd-Shift-f"
       }
-    },
-    "readPageSearch": {
-      "path": "./search.ts:readFileSearch",
-      "env": "server",
-      "pageNamespace": {
-        "pattern": "🔍 .+",
-        "operation": "readFile"
-      }
-    },
-    "getPageMetaSearch": {
-      "path": "./search.ts:getFileMetaSearch",
-      "env": "server",
-      "pageNamespace": {
-        "pattern": "🔍 .+",
-        "operation": "getFileMeta"
-      }
-    },
-    "insertTemplateText": {
-      "path": "./template.ts:insertTemplateText"
-    },
-    "applyLineReplace": {
-      "path": "./template.ts:applyLineReplace"
     },
     "newPage": {
       "path": "./page.ts:newPageCommand",

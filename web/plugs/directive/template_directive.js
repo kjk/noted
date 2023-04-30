@@ -10,6 +10,7 @@ import { replaceTemplateVars } from "../core/template.js";
 import { serverUpdateDirectives } from "./command.js";
 
 const templateRegex = /\[\[([^\]]+)\]\]\s*(.*)\s*/;
+
 export async function templateDirectiveRenderer(directive, pageName, arg) {
   if (typeof arg !== "string") {
     throw new Error("Template directives must be a string");
@@ -53,6 +54,7 @@ export async function templateDirectiveRenderer(directive, pageName, arg) {
   }
   return newBody.trim();
 }
+
 export function cleanTemplateInstantiations(text) {
   return replaceAsync(
     text,

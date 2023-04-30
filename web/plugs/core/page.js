@@ -198,29 +198,6 @@ export async function pageComplete(completeEvent) {
   };
 }
 
-export async function reindexSpace() {
-  console.log("Clearing page index...");
-  await index.clearPageIndex();
-  console.log("Listing all pages");
-  const pages = await space.listPages();
-  let counter = 0;
-  for (const { name } of pages) {
-    counter++;
-    console.log(`Indexing page ${counter}/${pages.length}: ${name}`);
-    const text = await space.readPage(name);
-    const parsed = await markdown.parseMarkdown(text);
-    await events.dispatchEvent("page:index", {
-      name,
-      tree: parsed,
-    });
-  }
-  console.log("Indexing completed!");
-}
-
-export async function clearPageIndex(page) {
-  await index.clearPageIndexForPage(page);
-}
-
 export async function parseIndexTextRepublish({ name, text }) {
   console.log("Reindexing", name);
   await events.dispatchEvent("page:index", {

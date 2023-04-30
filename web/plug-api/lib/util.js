@@ -1,4 +1,5 @@
 import { editor } from "../silverbullet-syscall/mod.js";
+
 export async function replaceAsync(str, regex, asyncFn) {
   const promises = [];
   str.replace(regex, (match, ...args) => {
@@ -9,14 +10,17 @@ export async function replaceAsync(str, regex, asyncFn) {
   const data = await Promise.all(promises);
   return str.replace(regex, () => data.shift());
 }
+
 export function isServer() {
   return (
     typeof window === "undefined" || typeof window.document === "undefined"
   );
 }
+
 export function isBrowser() {
   return !isServer();
 }
+
 export function notifyUser(message, type) {
   if (isBrowser()) {
     return editor.flashNotification(message, type);

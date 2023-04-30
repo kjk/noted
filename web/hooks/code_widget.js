@@ -1,40 +1,15 @@
+// in markdown code blocks (```$lang) maps the language to a function
+// that returns html rendering of the code block.
+// used for markdown and embed
+// could use for csv files and maybe more (plotting? calculator?)
+
 export class CodeWidgetHook {
+  codeWidgetCallbacks;
   constructor() {
-    this.codeWidgetCallbacks = /* @__PURE__ */ new Map();
+    this.codeWidgetCallbacks = new Map();
   }
-  collectAllCodeWidgets(system) {
-    this.codeWidgetCallbacks.clear();
-    for (const plug of system.loadedPlugs.values()) {
-      for (const [name, functionDef] of Object.entries(
-        plug.manifest.functions
-      )) {
-        if (!functionDef.codeWidget) {
-          continue;
-        }
-        this.codeWidgetCallbacks.set(functionDef.codeWidget, (bodyText) => {
-          return plug.invoke(name, [bodyText]);
-        });
-      }
-    }
-  }
-  apply(system) {
-    this.collectAllCodeWidgets(system);
-    system.on({
-      plugLoaded: () => {
-        this.collectAllCodeWidgets(system);
-      }
-    });
-  }
-  validateManifest(manifest) {
-    const errors = [];
-    for (const functionDef of Object.values(manifest.functions)) {
-      if (!functionDef.codeWidget) {
-        continue;
-      }
-      if (typeof functionDef.codeWidget !== "string") {
-        errors.push(`Codewidgets require a string name.`);
-      }
-    }
-    return errors;
+
+  add(name, cb) {
+    this.codeWidgetCallbacks.set(name, cb);
   }
 }

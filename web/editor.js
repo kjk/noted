@@ -59,6 +59,7 @@ import { clickNavigate, linkNavigate } from "./plugs/core/navigate.js";
 import { deletePage, pageComplete } from "./plugs/core/page.js";
 import { len, throttle, throwIf } from "./lib/util.js";
 
+import { CodeWidgetHook } from "./hooks/code_widget.js";
 import { PathPageNavigator } from "./navigator.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Space } from "./plug-api/silverbullet-syscall/space.js";
@@ -77,6 +78,7 @@ import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
 import { log } from "./lib/log.js";
+import { markdownWidget } from "./plugs/markdown/widget.js";
 import { parse } from "./markdown_parser/parse_tree.js";
 import { safeRun } from "./plugos/util.js";
 import { setEditor } from "./plug-api/silverbullet-syscall/editor.js";
@@ -88,25 +90,12 @@ import { wrapSelection } from "./plugs/core/text.js";
 
 const frontMatterRegex = /^---\n(.*?)---\n/ms;
 
-// import { CodeWidgetHook } from "./hooks/code_widget.js";
-
 /** @typedef { import("@codemirror/state").Extension} Extension */
 
 class PageState {
   constructor(scrollTop, selection) {
     this.scrollTop = scrollTop;
     this.selection = selection;
-  }
-}
-
-class CodeWidgetHook {
-  codeWidgetCallbacks;
-  constructor() {
-    this.codeWidgetCallbacks = new Map();
-  }
-
-  add(name, cb) {
-    this.codeWidgetCallbacks.set(name, cb);
   }
 }
 
@@ -372,15 +361,19 @@ export class Editor {
   loadPage = async (pageName) => {
     return false;
   };
-
   constructor(editorElement) {
     throwIf(!editorElement);
     this.editorElement = editorElement;
     this.space = new Space();
+
     this.codeWidgetHook = new CodeWidgetHook();
     this.codeWidgetHook.add("embed", async (bodyText) => {
       return embedWidget(bodyText);
     });
+    this.codeWidgetHook.add("markdown", async (bodyText) => {
+      return markdownWidget(bodyText);
+    });
+
     this.slashCommandHook = new SlashCommandHook(this);
     addSlashHooks(this.slashCommandHook);
     this.viewDispatch = (args) => {

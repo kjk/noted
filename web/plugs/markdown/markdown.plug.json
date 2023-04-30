@@ -26,14 +26,6 @@
       "path": "./preview.ts:previewClickHandler",
       "env": "client",
       "events": ["preview:click"]
-    },
-    "sharePublisher": {
-      "path": "./share.ts:sharePublisher",
-      "events": ["share:file"]
-    },
-    "markdownWidget": {
-      "path": "./widget.ts:markdownWidget",
-      "codeWidget": "markdown"
     }
   }
 }
