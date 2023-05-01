@@ -30,6 +30,7 @@
   import { log } from "./lib/log";
   import { nanoid } from "./lib/nanoid";
 
+  let commandPaletteNotes = [];
   let commandPalettePageNames = [];
   let commandPaletteCommands = ["Delete Note"];
   let commadnPaletteSearchTerm = "";
@@ -126,7 +127,7 @@
       if (idx === -1) {
         await createNewNote(item);
       } else {
-        let n = notes[idx];
+        let n = commandPaletteNotes[idx];
         await openNote(n);
       }
     } else if (kind === kSelectedCommand) {
@@ -142,10 +143,12 @@
 
   async function runCommandPalette(startWithCommands) {
     // log("selectPage");
-    let nNotes = len(notes);
+    commandPaletteNotes = sortNotesByLastModified(notes);
+    // in-place replace note by its title
+    let nNotes = len(commandPaletteNotes);
     commandPalettePageNames.length = nNotes;
     for (let i = 0; i < nNotes; i++) {
-      let n = notes[i];
+      let n = commandPaletteNotes[i];
       let title = getNoteTitle(n);
       commandPalettePageNames[i] = title;
     }
@@ -318,12 +321,18 @@
     return res;
   }
 
+  /**
+   * returns a copy of notes sorted by last modified
+   * notes most recently modified are first
+   * @param {Note[]} notes
+   * @returns {Note[]}
+   */
   function sortNotesByLastModified(notes) {
     let res = [...notes];
     res.sort((a, b) => {
       let aTime = getNoteLastModified(a);
       let bTime = getNoteLastModified(b);
-      return aTime - bTime;
+      return bTime - aTime;
     });
     return res;
   }

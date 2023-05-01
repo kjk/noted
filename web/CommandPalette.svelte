@@ -143,11 +143,6 @@
     selectedIdx = clamp(selectedIdx + dir, 0, len(filteredItems) - 1);
   }
 
-  function mouseClick(idx) {
-    console.log(`mouseClick: selectedIdx: ${selectedIdx}, idx: ${idx}`);
-    selectedIdx = idx;
-  }
-
   function resetFilteredItems(kind) {
     let nMaxFiltered = Math.max(len(names), len(commands));
     filteredItems.length = nMaxFiltered;
@@ -198,6 +193,10 @@
     onSelected(selectedFrom, itemIdx, item);
   }
 
+  /**
+   * @param {number} idx
+   * @returns {string}
+   */
   function getItem(idx) {
     let a = names;
     if (selectedFrom === kSelectedCommand) {
@@ -230,7 +229,7 @@
           <div
             class="cursor-pointer px-3 py-0.5 bg-gray-100 hover:bg-gray-200"
             use:scrollintoview
-            on:dblclick={() => selectItem(itemIdx)}
+            on:click={() => selectItem(itemIdx)}
           >
             {item}
           </div>
@@ -238,8 +237,7 @@
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <div
             class="cursor-pointer px-3 py-0.5 hover:bg-gray-200"
-            on:dblclick={() => selectItem(itemIdx)}
-            on:click={() => mouseClick(idx)}
+            on:click={() => selectItem(idx)}
           >
             {item}
           </div>
@@ -251,7 +249,7 @@
       class="flex justify-between text-xs px-2 py-1 bg-gray-50 text-gray-600"
     >
       <div>&uarr; &darr; to navigate</div>
-      <div>&nbsp; &crarr; to select</div>
+      <div>&nbsp; Enter or click to select</div>
       <div>Esc to close</div>
     </div>
     {#if selectedFrom === kSelectedName && allowCreateOnEnter && searchTerm !== ""}
