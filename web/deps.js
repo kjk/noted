@@ -12,7 +12,6 @@ export {
   completionKeymap,
 } from "@codemirror/autocomplete";
 export { styleTags, Tag, tagHighlighter, tags } from "@lezer/highlight";
-export * as YAML from "js-yaml";
 export {
   Emoji,
   GFM,
