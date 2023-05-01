@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import {
   addParentPointers,
@@ -28,7 +28,8 @@ export function extractFrontmatter(tree, removeKeys = []) {
       const yamlNode = t.children[1].children[0];
       const yamlText = renderToText(yamlNode);
       try {
-        const parsedData2 = YAML.parse(yamlText);
+        /** @type {any} */
+        const parsedData2 = YAML.load(yamlText);
         const newData2 = { ...parsedData2 };
         data = { ...data, ...parsedData2 };
         if (removeKeys.length > 0) {
@@ -40,7 +41,7 @@ export function extractFrontmatter(tree, removeKeys = []) {
             }
           }
           if (removedOne) {
-            yamlNode.text = YAML.stringify(newData2);
+            yamlNode.text = YAML.dump(newData2);
           }
         }
         if (Object.keys(newData2).length === 0) {
@@ -65,7 +66,8 @@ export function extractFrontmatter(tree, removeKeys = []) {
       return;
     }
     const codeText = codeTextNode.children[0].text;
-    const parsedData = YAML.parse(codeText);
+    /** @type {any} */
+    const parsedData = YAML.load(codeText);
     const newData = { ...parsedData };
     data = { ...data, ...parsedData };
     if (removeKeys.length > 0) {
@@ -77,7 +79,7 @@ export function extractFrontmatter(tree, removeKeys = []) {
         }
       }
       if (removedOne) {
-        codeTextNode.children[0].text = YAML.stringify(newData).trim();
+        codeTextNode.children[0].text = YAML.dump(newData).trim();
       }
     }
     if (Object.keys(newData).length === 0) {
@@ -98,13 +100,14 @@ export function prepareFrontmatterDispatch(tree, data) {
       const bodyNode = t.children[1].children[0];
       const yamlText = renderToText(bodyNode);
       try {
-        const parsedYaml = YAML.parse(yamlText);
+        /** @type {any} */
+        const parsedYaml = YAML.load(yamlText);
         const newData = { ...parsedYaml, ...data };
         dispatchData = {
           changes: {
             from: bodyNode.from,
             to: bodyNode.to,
-            insert: YAML.stringify(newData, { noArrayIndent: true }),
+            insert: YAML.dump(newData, { noArrayIndent: true }),
           },
         };
       } catch (e) {
@@ -119,8 +122,7 @@ export function prepareFrontmatterDispatch(tree, data) {
       changes: {
         from: 0,
         to: 0,
-        insert:
-          "---\n" + YAML.stringify(data, { noArrayIndent: true }) + "---\n",
+        insert: "---\n" + YAML.dump(data, { noArrayIndent: true }) + "---\n",
       },
     };
   }

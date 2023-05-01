@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import { applyQuery, removeQueries } from "../../plug-api/lib/query.js";
 import { collectNodesOfType, findNodeOfType } from "../../plug-api/lib/tree.js";
@@ -22,7 +22,7 @@ export async function indexData({ name, tree }) {
     }
     const codeText = codeTextNode.children[0].text;
     try {
-      const docs = codeText.split("---").map((d) => YAML.parse(d));
+      const docs = codeText.split("---").map((d) => YAML.load(d));
       for (let i = 0; i < docs.length; i++) {
         const doc = docs[i];
         if (!doc) {

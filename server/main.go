@@ -57,11 +57,12 @@ func isDev() bool {
 
 func main() {
 	var (
-		flgRunProd bool
-		flgDeploy  bool
-		flgBuild   bool
-		flgCi      bool
-		flgWc      bool
+		flgRunProd         bool
+		flgDeploy          bool
+		flgBuild           bool
+		flgCi              bool
+		flgWc              bool
+		flgVisualizeBundle bool
 	)
 	{
 		flag.BoolVar(&flgRunDev, "run-dev", false, "run the server in dev mode")
@@ -71,7 +72,15 @@ func main() {
 		flag.BoolVar(&flgCi, "ci", false, "true if needs to tell we're running under ci (github actions)")
 		flag.BoolVar(&flgWc, "wc", false, "count lines")
 		flag.BoolVar(&flgNoBrowserOpen, "no-open", false, "don't open browser when running dev server")
+		flag.BoolVar(&flgVisualizeBundle, "visualize-bundle", false, "visualize bundle")
 		flag.Parse()
+	}
+
+	if flgVisualizeBundle {
+		cmd := exec.Command("npx", "vite-bundle-visualizer")
+		cmdLog(cmd)
+		must(cmd.Run())
+		return
 	}
 
 	getSecretsFromEnv()

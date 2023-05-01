@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 function extractYoutubeVideoId(url) {
   let match = url.match(/youtube\.com\/watch\?v=([^&]+)/);
   if (match) {
@@ -12,7 +12,8 @@ function extractYoutubeVideoId(url) {
 }
 export function embedWidget(bodyText) {
   try {
-    const data = YAML.parse(bodyText);
+    /** @type {any} */
+    const data = YAML.load(bodyText);
     let url = data.url;
     const youtubeVideoId = extractYoutubeVideoId(url);
     if (youtubeVideoId) {
@@ -23,12 +24,12 @@ export function embedWidget(bodyText) {
     return {
       url,
       height: data.height,
-      width: data.width
+      width: data.width,
     };
   } catch (e) {
     return {
       html: `ERROR: Could not parse body as YAML: ${e.message}`,
-      script: ""
+      script: "",
     };
   }
 }

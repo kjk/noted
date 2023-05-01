@@ -1,6 +1,5 @@
 /** @type {string[]} */
 import { emojis } from "./emoji-opt";
-import { len } from "../../lib/util";
 
 // humans won't scroll through hundreds of results so limit
 // to a reasonable number
@@ -16,7 +15,7 @@ export function emojiCompleter({ linePrefix, pos }) {
   const [fullMatch, emojiName] = match;
 
   let nRes = 0;
-  let n = len(emojis) / 2;
+  let n = emojis.length / 2;
   for (let i = 0; i < n; i++) {
     let emoji = emojis[i * 2];
     let shortcode = emojis[i * 2 + 1];

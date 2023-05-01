@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import { collectNodesOfType, findNodeOfType } from "../../plug-api/lib/tree.js";
 import {
@@ -38,6 +38,7 @@ export async function checkCommand() {
 async function compileDefinition(text) {
   const tree = await markdown.parseMarkdown(text);
   const codeNodes = collectNodesOfType(tree, "FencedCode");
+  /** @type {any} */
   let manifest;
   let code;
   let language = "js";
@@ -45,7 +46,7 @@ async function compileDefinition(text) {
     const codeInfo = findNodeOfType(codeNode, "CodeInfo").children[0].text;
     const codeText = findNodeOfType(codeNode, "CodeText").children[0].text;
     if (codeInfo === "yaml") {
-      manifest = YAML.parse(codeText);
+      manifest = YAML.load(codeText);
       continue;
     }
     if (codeInfo === "typescript" || codeInfo === "ts") {

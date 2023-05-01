@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import { Fragment, renderHtml } from "./html_render.js";
 import {
@@ -60,7 +60,7 @@ function render(t, options = {}) {
     case "FrontMatter":
       if (options.renderFrontMatter) {
         const yamlCode = renderToText(t.children[1]);
-        const parsedYaml = YAML.parse(yamlCode);
+        const parsedYaml = YAML.load(yamlCode);
         const rows = [];
         for (const [k, v] of Object.entries(parsedYaml)) {
           rows.push({
@@ -70,7 +70,7 @@ function render(t, options = {}) {
               {
                 name: "td",
                 attrs: { class: "value" },
-                body: YAML.stringify(v),
+                body: YAML.dump(v),
               },
             ],
           });

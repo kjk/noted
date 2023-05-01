@@ -19,6 +19,7 @@ export default defineConfig({
 
       output: {
         manualChunks: {
+          // TODO: why this generates 2 chunks?
           emoji: ["web/plugs/emoji/emoji.js", "web/plugs/emoji/emoji-opt.js"],
           cm: [
             "codemirror",
@@ -30,6 +31,15 @@ export default defineConfig({
             "@codemirror/legacy-modes/mode/shell",
             "@codemirror/legacy-modes/mode/clike",
             "@codemirror/legacy-modes/mode/ruby",
+            "@codemirror/legacy-modes/mode/python",
+            "@codemirror/legacy-modes/mode/javascript",
+            "@codemirror/legacy-modes/mode/sql",
+            "@codemirror/legacy-modes/mode/xml",
+            "@codemirror/legacy-modes/mode/rust",
+            "@codemirror/legacy-modes/mode/toml",
+            "@codemirror/legacy-modes/mode/protobuf",
+            "@codemirror/legacy-modes/mode/yaml",
+            "@codemirror/legacy-modes/mode/simple-mode",
             // "@codemirror/lang-angular",
             // "@codemirror/lang-wast",
             "@codemirror/theme-one-dark",
@@ -42,6 +52,7 @@ export default defineConfig({
             "@codemirror/lang-xml",
             "@codemirror/lang-json",
             "@replit/codemirror-lang-svelte",
+            "@replit/codemirror-vim",
 
             "@codemirror/lang-rust",
             "@codemirror/lang-sql",

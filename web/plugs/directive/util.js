@@ -1,8 +1,9 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import Handlebars from "handlebars";
-import { niceDate } from "$sb/lib/dates.js";
+import { niceDate } from "../../plug-api/lib/dates.js";
 import { space } from "../../plug-api/silverbullet-syscall/mod.js";
+
 const maxWidth = 70;
 export function defaultJsonTransformer(_k, v) {
   if (v === void 0) {
@@ -85,7 +86,7 @@ export async function renderTemplate(renderTemplate2, data) {
   );
   Handlebars.registerHelper("yaml", (v, prefix) => {
     if (typeof prefix === "string") {
-      let yaml = YAML.stringify(v)
+      let yaml = YAML.dump(v)
         .split("\n")
         .join("\n" + prefix)
         .trim();
@@ -95,7 +96,7 @@ export async function renderTemplate(renderTemplate2, data) {
         return yaml;
       }
     } else {
-      return YAML.stringify(v).trim();
+      return YAML.dump(v).trim();
     }
   });
   let templateText = await space.readPage(renderTemplate2);

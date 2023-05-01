@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import { notifyUser } from "./util.js";
 import { readYamlPage } from "./yaml_page.js";
@@ -47,7 +47,7 @@ export async function writeSettings(settings) {
   const contents = `This page contains settings for configuring SilverBullet and its Plugs.
 Any changes outside of the yaml block will be overwritten.
 \`\`\`yaml
-${YAML.stringify(writeSettings2)}
+${YAML.dump(writeSettings2)}
 \`\`\``;
   await space.writePage(SETTINGS_PAGE, contents);
 }

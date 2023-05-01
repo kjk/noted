@@ -21,13 +21,15 @@ class System {
     return allCommands;
   }
 
-  reloadPlugins() {
-    log("System.reloadPlugins");
+  reloadPlugs() {
+    log("System.reloadPlugs");
   }
 
   async invokeCommand(commandName) {
     console.log("System.invokeCommand:", commandName);
   }
+
+  async invokeFunction(functionName, ...args) {}
 }
 
 export let system = new System();

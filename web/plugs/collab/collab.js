@@ -1,4 +1,4 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
 
 import {
   clientStore,
@@ -78,7 +78,7 @@ export async function detectPage() {
   if (frontMatter) {
     const yamlText = renderToText(frontMatter.children[1].children[0]);
     try {
-      let { $share } = YAML.parse(yamlText);
+      let { $share } = YAML.load(yamlText);
       if (!$share) {
         return;
       }

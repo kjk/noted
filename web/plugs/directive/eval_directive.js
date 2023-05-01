@@ -1,5 +1,7 @@
-import * as YAML from "yaml";
+import * as YAML from "js-yaml";
+
 import { jsonToMDTable, renderTemplate } from "./util.js";
+
 function translateJs(js) {
   return js.replaceAll(/(\w+\.\w+)\s*\(/g, 'await invokeFunction("$1", ');
 }
@@ -37,7 +39,7 @@ export async function evalDirectiveRenderer(_directive, _pageName, expression) {
     } else if (Array.isArray(result)) {
       return jsonToMDTable(result);
     }
-    return YAML.stringify(result);
+    return YAML.dump(result);
   } catch (e) {
     return `**ERROR:** ${e.message}`;
   }
