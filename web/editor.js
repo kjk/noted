@@ -71,7 +71,6 @@ import { cleanModePlugins } from "./cm_plugins/clean.js";
 import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { embedWidget } from "./plugs/core/embed.js";
-import { emojiCompleter } from "./plugs/emoji/emoji.js";
 import { focusEditorView } from "./lib/cmutil.js";
 import { getNoteTitle } from "./notesStore.js";
 import { indentUnit } from "@codemirror/language";
@@ -196,6 +195,20 @@ let commands = {
     },
   },
 };
+
+let emojiCompleterModule = null;
+async function emojiCompleter({ linePrefix, pos }) {
+  const match = /:([\w]+)$/.exec(linePrefix);
+  if (!match) {
+    return null;
+  }
+  if (!emojiCompleterModule) {
+    emojiCompleterModule = await import("./plugs/emoji/emoji.js");
+  }
+  let res = emojiCompleterModule.emojiCompleter({ linePrefix, pos });
+  log("emojiCompleter", len(res.options));
+  return res;
+}
 
 let events = {
   pageComplete: {

@@ -19,6 +19,7 @@ export default defineConfig({
 
       output: {
         manualChunks: {
+          emoji: ["web/plugs/emoji/emoji.js", "web/plugs/emoji/emoji-opt.js"],
           cm: [
             "codemirror",
             "@codemirror/legacy-modes/mode/lua",

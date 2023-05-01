@@ -2,6 +2,12 @@
 import { emojis } from "./emoji-opt";
 import { len } from "../../lib/util";
 
+// humans won't scroll through hundreds of results so limit
+// to a reasonable number
+const kMaxResults = 64;
+// perf: we re-use this array because it won't be shared
+let options = new Array(kMaxResults);
+
 export function emojiCompleter({ linePrefix, pos }) {
   const match = /:([\w]+)$/.exec(linePrefix);
   if (!match) {
@@ -9,7 +15,7 @@ export function emojiCompleter({ linePrefix, pos }) {
   }
   const [fullMatch, emojiName] = match;
 
-  let options = [];
+  let nRes = 0;
   let n = len(emojis) / 2;
   for (let i = 0; i < n; i++) {
     let emoji = emojis[i * 2];
@@ -21,10 +27,15 @@ export function emojiCompleter({ linePrefix, pos }) {
         label: emoji,
         type: "emoji",
       };
-      options.push(opt);
+      options[nRes] = opt;
+      nRes++;
+      if (nRes >= kMaxResults) {
+        break;
+      }
     }
   }
 
+  options.length = nRes;
   return {
     from: pos - fullMatch.length,
     filter: false,
