@@ -3,7 +3,7 @@
   /** @typedef {import("./notesStore").Note} Note */
 
   import { debounce, len, pluralize, throwIf } from "./lib/util";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import {
     getNotes,
     newNote,
@@ -278,8 +278,7 @@
   }
 
   onMount(async () => {
-    let id = nanoid(8);
-    log("Noted.onMount, id:", id);
+    log("Noted.onMount, id:");
 
     let user = await getLoggedUser();
     log("user:", user);
@@ -292,19 +291,27 @@
     let nNotes = len(notes);
     log("notes:", nNotes);
 
-    editor = new Editor(editorElement, null);
-    log("editor:", editor);
-    editor.flashNotification = flashNotification;
-    editor.viewDispatch = viewDispatch;
-    setEditor(editor);
-    await editor.init();
+    log("Noted.onMount: editor:", editor);
+    if (!editor) {
+      // in dev onMounted() is called multiple times
+      // and we crete and init editor multiple times
+      // which subscribes for PageNavigator which
+      // creates multiple listeners for "popstate"
+      // which adds bogus logging
+      editor = new Editor(editorElement, null);
+      log("editor:", editor);
+      editor.flashNotification = flashNotification;
+      editor.viewDispatch = viewDispatch;
+      setEditor(editor);
+      await editor.init();
+    }
 
     document.addEventListener("keydown", onKeyDown);
+  });
 
-    return () => {
-      console.log("Noted.onUnmount, id:", id);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+  onDestroy(() => {
+    console.log("Noted.onDestroy");
+    document.removeEventListener("keydown", onKeyDown);
   });
 </script>
 

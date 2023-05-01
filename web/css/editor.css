@@ -3,7 +3,7 @@
 }
 #sb-main .cm-editor {
   font-size: 12pt;
-  /* height: 100%; */
+  height: 100%;
 }
 #sb-main .cm-editor .cm-content {
   margin-left: auto;

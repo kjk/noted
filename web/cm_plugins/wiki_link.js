@@ -17,6 +17,7 @@ export function cleanWikiLinkPlugin(editor) {
         if (type.name !== "WikiLink") {
           return;
         }
+        // log("cleanWikiLinkPlugin: enter", { type, from, to });
         const text = state.sliceDoc(from, to);
         const match = pageLinkRegex.exec(text);
         if (!match) return;
@@ -31,6 +32,7 @@ export function cleanWikiLinkPlugin(editor) {
         if (note) {
           pageExists = true;
         }
+        // TODO: \u{1F4AD} is SilverBullet's cloud prefix, which is not applicable for us
         if (cleanPage === "" || cleanPage.startsWith("\u{1F4AD}")) {
           pageExists = true;
         }

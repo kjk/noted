@@ -899,7 +899,7 @@ export class Editor {
           touchCount = 0;
         },
         mousedown: (event, view) => {
-          log("mousedown", event);
+          // log("mousedown", event);
           if (!event.altKey && event.target instanceof Element) {
             const parentA = event.target.closest("a");
             if (parentA) {
@@ -923,7 +923,7 @@ export class Editor {
           }
         },
         click: (event, view) => {
-          log("click:", event, view);
+          // log("click:", event, view);
           safeRun(async () => {
             const clickEvent = {
               page: note,
@@ -1154,11 +1154,10 @@ export class Editor {
   }
 
   /**
-   *
    * @param {Note} note
    */
   restoreState(note) {
-    log("Editor.restoreState", note);
+    // log("Editor.restoreState", note);
     const pageState = this.openPages.get(note);
     const editorView = this.editorView;
     if (pageState) {
@@ -1179,7 +1178,6 @@ export class Editor {
   }
 
   /**
-   *
    * @param {Note} note
    */
   saveState(note) {

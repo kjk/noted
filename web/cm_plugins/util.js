@@ -1,20 +1,30 @@
 import {
   Decoration,
   EditorView,
-  foldedRanges,
   StateField,
   WidgetType,
+  foldedRanges,
 } from "../deps.js";
+
+import { log } from "../lib/log.js";
+
 export class LinkWidget extends WidgetType {
   constructor(options) {
+    // console.trace("LinkWidget", options);
     super();
     this.options = options;
   }
+
   toDOM() {
     const anchor = document.createElement("a");
     anchor.className = this.options.cssClass;
     anchor.textContent = this.options.text;
-    anchor.addEventListener("click", (e) => {
+    // TODO: it's "click" in silverbullet but doesn't trigger if the focus
+    // is in the editor. The first mousedown (click?) takes away the focus
+    // and only then another "click" is tiggered. No idea what's different.
+    // related to focus / blur?
+    anchor.addEventListener("mousedown", (e) => {
+      log("LinkWidget: mousedown", e, "this.options", this.options);
       e.preventDefault();
       e.stopPropagation();
       this.options.callback(e);
@@ -24,6 +34,7 @@ export class LinkWidget extends WidgetType {
     return anchor;
   }
 }
+
 export class HtmlWidget extends WidgetType {
   constructor(html, className, onClick) {
     super();
