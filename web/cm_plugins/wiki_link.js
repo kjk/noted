@@ -6,7 +6,9 @@ import {
   isCursorInRange,
 } from "./util.js";
 
+import { log } from "../lib/log.js";
 import { pageLinkRegex } from "../markdown_parser/parser.js";
+
 export function cleanWikiLinkPlugin(editor) {
   return decoratorStateField((state) => {
     const widgets = [];
@@ -19,17 +21,15 @@ export function cleanWikiLinkPlugin(editor) {
         const match = pageLinkRegex.exec(text);
         if (!match) return;
         const [_fullMatch, page, pipePart, alias] = match;
-        const allPages = editor.space.listPages();
         let pageExists = false;
         let cleanPage = page;
         if (page.includes("@")) {
           cleanPage = page.split("@")[0];
         }
-        for (const pageMeta of allPages) {
-          if (pageMeta.name === cleanPage) {
-            pageExists = true;
-            break;
-          }
+        let note = editor.findNoteByTitle(cleanPage);
+        // log("cleanWikiLinkPlugin: note", note, "cleanPage:", cleanPage);
+        if (note) {
+          pageExists = true;
         }
         if (cleanPage === "" || cleanPage.startsWith("\u{1F4AD}")) {
           pageExists = true;
@@ -54,11 +54,17 @@ export function cleanWikiLinkPlugin(editor) {
             widget: new LinkWidget({
               text: linkText,
               title: pageExists ? `Navigate to ${page}` : `Create ${page}`,
-              href: `/${page.replaceAll(" ", "_")}`,
+              href: `/n/${encodeURIComponent(page)}`,
               cssClass: pageExists
                 ? "sb-wiki-link-page"
                 : "sb-wiki-link-page-missing",
               callback: (e) => {
+                log(
+                  "cleanWikiLinkPlugin: callback",
+                  e,
+                  "editro.currentPage",
+                  editor.currentPage
+                );
                 if (e.altKey) {
                   return editor.editorView.dispatch({
                     selection: { anchor: from + 2 },

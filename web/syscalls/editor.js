@@ -5,7 +5,7 @@
 export function editorSyscalls(editor) {
   const syscalls = {
     "editor.getCurrentPage": () => {
-      return editor.currentPage;
+      return editor.currentNote;
     },
     "editor.getText": () => {
       return editor.getText();

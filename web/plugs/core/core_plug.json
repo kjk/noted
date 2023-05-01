@@ -169,36 +169,6 @@
         "name": "Extract text to new page"
       }
     },
-    "updatePlugsCommand": {
-      "path": "./plugmanager.ts:updatePlugsCommand",
-      "command": {
-        "name": "Plugs: Update",
-        "key": "Ctrl-Shift-p",
-        "mac": "Cmd-Shift-p"
-      }
-    },
-    "updatePlugs": {
-      "path": "./plugmanager.ts:updatePlugs",
-      "env": "server"
-    },
-    "getPlugHTTPS": {
-      "path": "./plugmanager.ts:getPlugHTTPS",
-      "events": ["get-plug:https"]
-    },
-    "getPlugGithub": {
-      "path": "./plugmanager.ts:getPlugGithub",
-      "events": ["get-plug:github"]
-    },
-    "getPlugGithubRelease": {
-      "path": "./plugmanager.ts:getPlugGithubRelease",
-      "events": ["get-plug:ghr"]
-    },
-    "addPlugCommand": {
-      "path": "./plugmanager.ts:addPlugCommand",
-      "command": {
-        "name": "Plugs: Add"
-      }
-    },
     "parseCommand": {
       "path": "./debug.ts:parsePageCommand",
       "command": {

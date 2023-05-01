@@ -1,6 +1,7 @@
 import { KV, createKVStoresDB } from "./lib/dbutil";
 import { blobToUtf8, len, startTimer, utf8ToBlob } from "./lib/util";
 
+import { decode } from "js-base64";
 import { log } from "./lib/log";
 import { nanoid } from "./lib/nanoid";
 
@@ -50,6 +51,9 @@ const kNoteIdxUpdatedAt = 6;
 const kNoteIdxSize = 7;
 const kNoteFieldsCount = 8;
 
+const kNoteIDLength = 6; // was 8 at some point
+const kNoteCotentIDLength = 4;
+
 function logEntrySame(e1, e2) {
   let n = len(e1);
   if (n !== len(e2)) {
@@ -67,7 +71,7 @@ function logEntrySame(e1, e2) {
  * @returns {string}
  */
 export function genRandomNoteID() {
-  return nanoid(6);
+  return nanoid(kNoteIDLength);
 }
 
 /**
@@ -75,7 +79,7 @@ export function genRandomNoteID() {
  * @returns {string}
  */
 function makeRandomContentID(noteID) {
-  return noteID + "-" + nanoid(4);
+  return noteID + "-" + nanoid(kNoteCotentIDLength);
 }
 
 // each log entry is an array
@@ -132,6 +136,10 @@ function mkLogDeleteNote(id) {
 
 // derives from string, valueOf() is id
 export class Note extends String {}
+
+export function isNote(o) {
+  return Note.prototype.isPrototypeOf(o);
+}
 
 class StoreCommon {
   // this is reconstructed from log entries
@@ -689,18 +697,34 @@ export function changeToLocalStore() {
   store = new StoreLocal();
 }
 
+/**
+ * @returns {Promise<Note[]>}
+ */
 export async function getNotes() {
   return store.getNotes();
 }
 
+/**
+ * @returns {Note[]}
+ */
 export function getNotesSync() {
   return store.getNotesSync();
 }
 
+/**
+ *
+ * @param {string} title
+ * @param {string} type
+ * @returns {Promise<Note>}
+ */
 export async function newNote(title, type = "md") {
   return store.newNote(title, type);
 }
 
+/**
+ * @param {Note} note
+ * @param {string} content
+ */
 export async function addNoteVersion(note, content) {
   let currContent = await store.getNoteLatestVersion(note);
   if (currContent == content) {
@@ -710,10 +734,26 @@ export async function addNoteVersion(note, content) {
   return store.addNoteVersion(note, content);
 }
 
+/**
+ * @param {Note} note
+ * @returns {string}
+ */
+export function getNoteID(note) {
+  return note.valueOf();
+}
+
+/**
+ * @param {Note} note
+ * @returns {string}
+ */
 export function getNoteTitle(note) {
   return store.getNoteTitle(note);
 }
 
+/**
+ * @param {Note} note
+ * @param {string} title
+ */
 export function setNoteTitle(note, title) {
   let currTitle = store.getNoteTitle(note);
   if (currTitle == title) {
@@ -722,18 +762,152 @@ export function setNoteTitle(note, title) {
   return store.setNoteTitle(note, title);
 }
 
+/**
+ * @param {Note} note
+ * @returns {Promise<Note[]>}
+ */
 export async function deleteNote(note) {
   return store.deleteNote(note);
 }
 
-export function getNoteLatestVersion(note) {
+/**
+ * @param {Note} note
+ * @returns {Promise<string>}
+ */
+export async function getNoteLatestVersion(note) {
   return store.getNoteLatestVersion(note);
 }
 
+/**
+ * @param {Note} note
+ * @returns {number}
+ */
 export function getNoteLastModified(note) {
   return store.getNoteLastModified(note);
 }
 
+/**
+ * @param {Note} note
+ * @returns {number}
+ */
 export function getNoteSize(note) {
   return store.getNoteSize(note);
+}
+
+/**
+ * @returns {Note}
+ */
+export function getLastModifiedNote() {
+  let notes = getNotesSync();
+  let time = 0;
+  let res = null;
+  for (let n of notes) {
+    let t = getNoteLastModified(n);
+    if (t > time) {
+      time = t;
+      res = n;
+    }
+  }
+  return res;
+}
+
+const idSep = "~";
+
+/**
+ * @param {string} encodedTitle
+ * @returns {[string, string]}
+ */
+export function parseEncodedTitle(encodedTitle) {
+  let sepIdx = encodedTitle.lastIndexOf(idSep);
+  if (sepIdx < 0) {
+    // if there's no separator, it could be a title or a noteID
+    return [encodedTitle, encodedTitle];
+  }
+  let title = encodedTitle.substring(0, sepIdx);
+  let id = encodedTitle.substring(sepIdx + 1);
+  return [title, id];
+}
+
+/**
+ * @param {string} id
+ * @returns {Note}
+ */
+export function getNoteByID(id) {
+  if (!id) {
+    return null;
+  }
+  let notes = store.getNotesSync();
+  for (let n of notes) {
+    if (n.valueOf() === id) {
+      return n;
+    }
+  }
+  return null;
+}
+
+/**
+ * title could be ${noteID}, ${title}-${noteID}
+ * @param {string} encodedTitle
+ * @returns {Note}
+ */
+export function getNoteByEncodedTitle(encodedTitle) {
+  let notes = store.getNotesSync();
+  // log("getNoteByTitle:", encodedTitle, "notes: ", len(notes));
+
+  let [title, id] = parseEncodedTitle(encodedTitle);
+  let note = getNoteByID(id);
+  if (note) {
+    return note;
+  }
+  // log("getNoteByTitle: title:", title, "id:", id);
+  // title could have been encoded for url
+  let decodedTitle = decodeURIComponent(title);
+  for (let n of notes) {
+    let noteTitle = getNoteTitle(n);
+    if (
+      noteTitle === title ||
+      noteTitle === decodedTitle ||
+      noteTitle === encodedTitle
+    ) {
+      return n;
+    }
+  }
+  if (decodedTitle === title || decodedTitle === encodedTitle) {
+    return null;
+  }
+  // note: this migh return false positives
+  // log("getNoteByTitle: newTitle:", decodedTitle, "id:", id);
+  for (let n of notes) {
+    let noteTitle = getNoteTitle(n);
+    noteTitle = noteTitle.replaceAll("_", " ");
+    if (noteTitle == decodedTitle) {
+      return n;
+    }
+  }
+  return null;
+}
+
+/**
+ * title could be ${noteID}, ${title}-${noteID} ${title}
+ * @param {string} encodedTitle
+ * @returns {Note}
+ */
+export function getNoteByTitleOrID(encodedTitle) {
+  let notes = store.getNotesSync();
+
+  let [title, id] = parseEncodedTitle(encodedTitle);
+  // log("getNoteByTitleOrID: title:", title, "id:", id, "notes:", len(notes));
+  let note = getNoteByID(id);
+  if (note) {
+    return note;
+  }
+  // title could have been encoded for url
+  for (let n of notes) {
+    let noteTitle = getNoteTitle(n);
+    if (noteTitle === title || noteTitle === encodedTitle) {
+      return n;
+    }
+  }
+  // log(`getNoteByTitleOrID: didn't find note`);
+  return null;
 }

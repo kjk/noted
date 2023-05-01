@@ -5,8 +5,6 @@
   import { debounce, len, pluralize, throwIf } from "./lib/util";
   import { onMount } from "svelte";
   import {
-    addNoteVersion,
-    getNoteLatestVersion,
     getNotes,
     newNote,
     getNoteTitle,
@@ -15,6 +13,7 @@
     changeToLocalStore,
     deleteNote,
     getNoteLastModified,
+    getNoteID,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -29,6 +28,7 @@
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
   import { log } from "./lib/log";
   import { nanoid } from "./lib/nanoid";
+  import { encodeNoteURL } from "./navigator";
 
   let commandPaletteNotes = [];
   let commandPalettePageNames = [];
@@ -56,20 +56,20 @@
   let editor;
   let errorMsg = "";
 
-  /** @type {Note} */
-  let note;
-
   let title;
   /** @type {HTMLElement}*/
   let titleEl;
 
   let debouncedTitleChanged = debounce(titleChanged, 500);
 
-  $: noteChanged(note);
   $: debouncedTitleChanged(title);
 
   async function titleChanged(title) {
-    if (!title || !note) {
+    if (!title || !editor) {
+      return;
+    }
+    let note = editor.currentNote;
+    if (!note) {
       return;
     }
     let prevTitle = getNoteTitle(note);
@@ -78,47 +78,36 @@
     }
     log(`titleChanged: '${prevTitle}' => '${title}'`);
     setNoteTitle(note, title);
-    notes = notes;
-  }
-
-  async function noteChanged(note) {
-    if (!note) {
-      return;
-    }
-    log("noteChanged:", note);
-    title = getNoteTitle(note);
-    let s = await getNoteLatestVersion(note);
-    setEditorText(s);
-  }
-
-  async function handleDocChanged(tr) {
-    let s = editor.getText();
-    await addNoteVersion(note, s);
+    // notes = notes;
   }
 
   let flashMsg = "";
 
-  /**
-   * @param {string} s
-   */
-  async function setEditorText(s) {
-    // TODO: will need to change extensions based on
-    // type of s
-    editor.setText(s);
+  function viewDispatch(args) {
+    let kind = args.type;
+    log("viewDispatch:", args);
+    switch (kind) {
+      case "page-loaded":
+        let note = args.note;
+        title = getNoteTitle(note);
+        let noteURL = "/n/" + encodeNoteURL(note);
+        let path = window.location.pathname;
+        if (path !== "" && path != noteURL) {
+          log("viewDispatch: replaceState:", noteURL, "path:", path);
+          let noteID = getNoteID(note);
+          let pos = 0;
+          window.history.replaceState({ noteID, pos }, noteID, noteURL);
+        }
+        document.title = title;
+        break;
+    }
   }
 
   async function deleteCurrentNote() {
+    let note = editor.currentNote;
     log("deleteCurrentNote:", note);
     notes = await deleteNote(note);
-    /** @type {Note} */
-    let newNote = null;
-    if (len(notes) === 0) {
-      await createNewNote();
-      return;
-    }
-    // TODO: this should use navigation stack
-    newNote = notes[0];
-    await openNote(newNote);
+    editor.navigate(null);
   }
 
   async function onNoteOrCommandSelected(kind, idx, item) {
@@ -128,7 +117,7 @@
         await createNewNote(item);
       } else {
         let n = commandPaletteNotes[idx];
-        await openNote(n);
+        await editor.navigate(n);
       }
     } else if (kind === kSelectedCommand) {
       log("command:", item);
@@ -242,7 +231,7 @@
   async function createNewNote(title = "") {
     log("createNewNote");
     let n = await newNote(title);
-    await openNote(n);
+    await editor.navigate(n);
     if (title === "") {
       titleEl.focus();
     }
@@ -253,72 +242,7 @@
     log("logoutGitHub");
     logout();
     changeToLocalStore();
-    await setLastNote();
-  }
-
-  /**
-   * @param {Note} n
-   */
-  async function openNote(n) {
-    log("openNote:", n, n ? getNoteTitle(n) : "");
-    if (!n) {
-      note = null;
-      editor.currentNote = null;
-      return;
-    }
-    if (note === n) {
-      editor.focus();
-      return;
-    }
-    // pre-cache the note content to avoid visible switch
-    await getNoteLatestVersion(n);
-    note = n;
-    editor.currentNote = n;
-    if (getNoteTitle(n) !== "") {
-      editor.focus();
-    }
-  }
-
-  async function setLastNote() {
-    notes = await getNotes();
-    let nNotes = len(notes);
-    log("notes:", nNotes);
-    if (nNotes === 0) {
-      await createNewNote();
-    } else {
-      let currNote = notes[nNotes - 1];
-      await openNote(currNote);
-    }
-  }
-
-  async function setLastModifiedNote() {
-    notes = await getNotes();
-    let nNotes = len(notes);
-    log("notes:", nNotes);
-    if (nNotes === 0) {
-      await createNewNote();
-    } else {
-      // TODO: could optimize by doing a single scan
-      let currNote = pickLastModifiedNote(notes);
-      await openNote(currNote);
-    }
-  }
-
-  /**
-   * @param {Note[]} notes
-   * @returns {Note}
-   */
-  function pickLastModifiedNote(notes) {
-    let time = 0;
-    let res = null;
-    for (let n of notes) {
-      let t = getNoteLastModified(n);
-      if (t > time) {
-        time = t;
-        res = n;
-      }
-    }
-    return res;
+    editor.navigate(null);
   }
 
   /**
@@ -337,25 +261,6 @@
     return res;
   }
 
-  /**
-   * @param {string} name
-   * @returns {Promise<boolean>} true if state was restored
-   */
-  async function loadNoteByName(name) {
-    // TODO: implement state restoration logic
-    let stateWasRestored = true;
-    log("loadNoteByName:", name);
-    let notes = await getNotes();
-    for (let n of notes) {
-      let title = getNoteTitle(n);
-      if (title === name) {
-        await openNote(n);
-        return stateWasRestored;
-      }
-    }
-    return stateWasRestored;
-  }
-
   async function useLocalStore() {
     log("useLocalStore");
     // TODO: clewar remote store cache
@@ -367,9 +272,14 @@
     changeToRemoteStore();
   }
 
+  function flashNotification(msg, type) {
+    // TODO: implement me and more asdf
+    log("flashNotification:", msg, type);
+  }
+
   onMount(async () => {
     let id = nanoid(8);
-    log("Noted onMount, id:", id);
+    log("Noted.onMount, id:", id);
 
     let user = await getLoggedUser();
     log("user:", user);
@@ -382,16 +292,17 @@
     let nNotes = len(notes);
     log("notes:", nNotes);
 
-    editor = new Editor(editorElement);
-    editor.loadPage = loadNoteByName;
+    editor = new Editor(editorElement, null);
     log("editor:", editor);
+    editor.flashNotification = flashNotification;
+    editor.viewDispatch = viewDispatch;
     setEditor(editor);
-    editor.docChanged = debounce(handleDocChanged, 1000);
+    await editor.init();
+
     document.addEventListener("keydown", onKeyDown);
 
-    await setLastModifiedNote();
-
     return () => {
+      console.log("Noted.onUnmount, id:", id);
       document.removeEventListener("keydown", onKeyDown);
     };
   });

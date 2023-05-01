@@ -46,6 +46,18 @@ import {
   xmlLanguage,
   yamlLanguage,
 } from "./deps.js";
+import { PathPageNavigator, encodeNoteURL } from "./navigator.js";
+import {
+  addNoteVersion,
+  getLastModifiedNote,
+  getNoteByEncodedTitle,
+  getNoteByTitleOrID,
+  getNoteLatestVersion,
+  getNoteTitle,
+  getNotes,
+  isNote,
+  newNote,
+} from "./notesStore.js";
 import {
   applyLineReplace,
   insertSnippet,
@@ -60,7 +72,6 @@ import { deletePage, pageComplete } from "./plugs/core/page.js";
 import { len, throttle, throwIf } from "./lib/util.js";
 
 import { CodeWidgetHook } from "./hooks/code_widget.js";
-import { PathPageNavigator } from "./navigator.js";
 import { SlashCommandHook } from "./hooks/slash_command.js";
 import { Space } from "./plug-api/silverbullet-syscall/space.js";
 import { Tag } from "./deps.js";
@@ -72,7 +83,6 @@ import { commandComplete } from "./plugs/core/command.js";
 import customMarkdownStyle from "./style.js";
 import { embedWidget } from "./plugs/core/embed.js";
 import { focusEditorView } from "./lib/cmutil.js";
-import { getNoteTitle } from "./notesStore.js";
 import { indentUnit } from "@codemirror/language";
 import { inlineImagesPlugin } from "./cm_plugins/inline_image.js";
 import { lineWrapper } from "./cm_plugins/line_wrapper.js";
@@ -88,8 +98,10 @@ import { unfurlCommand } from "./plugs/core/link.js";
 import { wrapSelection } from "./plugs/core/text.js";
 
 const frontMatterRegex = /^---\n(.*?)---\n/ms;
+const saveInterval = 1000; // 1 sec
 
 /** @typedef { import("@codemirror/state").Extension} Extension */
+/** @typedef {import("./notesStore").Note} Note */
 
 class PageState {
   constructor(scrollTop, selection) {
@@ -354,13 +366,16 @@ function addSlashHooks(slashCommandHook) {
   }
 }
 
+let initialViewState = {
+  isLoading: false,
+  unsavedChanges: false,
+};
+
 export class Editor {
   /** @type {HTMLElement} */
   editorElement;
   /** @type {EditorView} */
   editorView;
-  /** @type {Function} */
-  docChanged;
   mdExtensions = [];
   /** @type {Space}  */
   space;
@@ -370,11 +385,19 @@ export class Editor {
   currentNote;
   editorCommands;
   markdownLang;
+  /** @type {Note} */
+  indexNote = null;
+  viewState = initialViewState;
+  flashNotification = (msg, type) => {};
 
-  loadPage = async (pageName) => {
-    return false;
-  };
-  constructor(editorElement) {
+  // maps Note to PageState
+  openPages = new Map();
+
+  /**
+   * @param {HTMLElement} editorElement
+   * @param {Note} indexNote
+   */
+  constructor(editorElement, indexNote) {
     throwIf(!editorElement);
     this.editorElement = editorElement;
     this.space = new Space();
@@ -402,80 +425,220 @@ export class Editor {
     this.editorCommands = buildEditorCommands(commands);
 
     this.editorView = new EditorView({
-      state: this.createEditorState("", false),
+      state: this.createEditorState(null, "", false),
       parent: editorElement,
     });
     if (this.editorView.contentDOM) {
       this.tweakEditorDOM(this.editorView.contentDOM);
     }
 
-    this.pageNavigator = new PathPageNavigator(
-      "", // indexPage
-      "" // urlPrefix
-    );
-
-    this.pageNavigator.subscribe(async (pageName, pos) => {
-      log("Now navigating to", pageName);
-      if (!this.editorView) {
-        return;
-      }
-      const stateRestored = await this.loadPage(pageName);
-    });
+    this.indexNote = indexNote;
+    this.pageNavigator = new PathPageNavigator(this.indexNote);
 
     // TODO: long term we want to undo this redirection
     setEditor(this);
   }
-  tweakEditorDOM(contentDOM) {
-    contentDOM.spellcheck = true;
-    contentDOM.setAttribute("autocorrect", "on");
-    contentDOM.setAttribute("autocapitalize", "on");
-  }
+
   async reloadPage() {
     log("Editor.reloadPage");
     // TODO: implement me
   }
 
-  async navigate(name, pos, replaceState = false, newWindow = false) {
-    log("Editor.navigate:", name, pos, replaceState, newWindow);
-    // TODO: we don't have indexPage
-    // if (!name) {
-    //   name = this.indexPage;
-    // }
+  focus() {
+    focusEditorView(this.editorView);
+  }
+
+  /**
+   *
+   * @param {string} title
+   * @returns {Note}
+   */
+  findNoteByTitle(title) {
+    return getNoteByTitleOrID(title);
+  }
+
+  /**
+   * @param {Note|string} noteOrTitle
+   * @param {number|string} pos
+   * @param {boolean} replaceState
+   * @param {boolean} newWindow
+   */
+  async navigate(
+    noteOrTitle,
+    pos = 0,
+    replaceState = false,
+    newWindow = false
+  ) {
+    log("Editor.navigate:", noteOrTitle, pos, replaceState, newWindow);
+    let note = null;
+    if (isNote(noteOrTitle)) {
+      note = noteOrTitle;
+    } else if (noteOrTitle === null) {
+      note = getLastModifiedNote();
+      log(`Editor.navigate: using last modified note`, note);
+    } else if (noteOrTitle) {
+      let title = /** @type {string} */ (noteOrTitle);
+      note = getNoteByTitleOrID(title);
+      if (!note) {
+        // title = title.replaceAll("_", " ");
+        log(`Editor.navigate: creating new note`, title);
+        // TODO: in silverbullet, it propagates to pageNavigator.navigate()
+        // and creates a new note in loadPage()
+        note = await newNote(title);
+        await this.loadPage(note);
+        return;
+      }
+    }
 
     if (newWindow) {
-      const win = window.open(`${location.origin}/${name}`, "_blank");
+      let encodedTitle = encodeNoteURL(note);
+      const win = window.open(`${location.origin}/n/${encodedTitle}`, "_blank");
       if (win) {
         win.focus();
       }
       return;
     }
 
-    await this.pageNavigator.navigate(name, pos, replaceState);
-  }
-
-  get pageName() {
-    return this.currentPage;
-  }
-
-  get currentPage() {
-    let title = "";
-    if (this.currentNote) {
-      title = getNoteTitle(this.currentNote);
-    }
-    log(`Editor.currentPage: '${title}'`);
-    return title;
+    await this.pageNavigator.navigate(note, pos, replaceState);
   }
 
   /**
+   * @param {string|Note} noteOrTitle
+   * @returns {Promise<boolean>} true if state was restored
+   */
+  async loadPage(noteOrTitle) {
+    log(`Editor.loadPage`, noteOrTitle);
+    const editorView = this.editorView;
+    if (!editorView) {
+      return false;
+    }
+
+    /** @type {Note} */
+    let note = null;
+    if (noteOrTitle !== null) {
+      if (isNote(noteOrTitle)) {
+        note = noteOrTitle;
+      } else {
+        // @ts-ignore
+        note = getNoteByEncodedTitle(noteOrTitle);
+      }
+    }
+
+    if (!note) {
+      note = getLastModifiedNote();
+      if (!note) {
+        log(`Editor.loadPage: creating new note`);
+        note = await newNote("");
+      }
+    }
+
+    const loadingDifferentPage = note !== this.currentNote;
+
+    const previousNote = this.currentNote;
+    if (previousNote) {
+      this.saveState(previousNote);
+      if (previousNote !== note) {
+        await this.save(true);
+      }
+    }
+    this.viewDispatch({
+      type: "page-loading",
+      name: note,
+    });
+    let text = await getNoteLatestVersion(note);
+    const editorState = this.createEditorState(note, text, false);
+    editorView.setState(editorState);
+    if (editorView.contentDOM) {
+      this.tweakEditorDOM(editorView.contentDOM);
+    }
+    const stateRestored = this.restoreState(note);
+    this.viewDispatch({
+      type: "page-loaded",
+      note: note,
+    });
+    if (loadingDifferentPage) {
+      this.dispatchEvent("editor:pageLoaded", note).catch(console.error);
+    } else {
+      this.dispatchEvent("editor:pageReloaded", note).catch(console.error);
+    }
+    this.currentNote = note;
+    return stateRestored;
+  }
+
+  tweakEditorDOM(contentDOM) {
+    contentDOM.spellcheck = true;
+    contentDOM.setAttribute("autocorrect", "on");
+    contentDOM.setAttribute("autocapitalize", "on");
+  }
+
+  /**
+   * @returns {Note}
+   */
+  get currentPage() {
+    let note = this.currentNote;
+    log(`Editor.currentPage: '${note}'`);
+    return note;
+  }
+
+  async init() {
+    log("Editor.init");
+    // called by pageNavigator
+    this.pageNavigator.subscribe(async (note, pos) => {
+      log("Editor: Now navigating to", note);
+      if (!this.editorView) {
+        return;
+      }
+      const stateRestored = await this.loadPage(note);
+      if (pos) {
+        if (typeof pos === "string") {
+          console.log("Navigating to anchor", pos);
+          const posLookup = 0;
+          // const posLookup = await this.system.localSyscall(
+          //   "core",
+          //   "index.get",
+          //   [pageName, `a:${pageName}:${pos}`]
+          // );
+          if (!posLookup) {
+            return this.flashNotification(
+              `Could not find anchor @${pos}`,
+              "error"
+            );
+          } else {
+            pos = +posLookup;
+          }
+        }
+        this.editorView.dispatch({
+          selection: { anchor: pos },
+          scrollIntoView: true,
+        });
+      } else if (!stateRestored) {
+        const pageText = this.editorView.state.sliceDoc();
+        let initialCursorPos = 0;
+        const match = frontMatterRegex.exec(pageText);
+        if (match) {
+          initialCursorPos = match[0].length;
+        }
+        this.editorView.scrollDOM.scrollTop = 0;
+        this.editorView.dispatch({
+          selection: { anchor: initialCursorPos },
+          scrollIntoView: true,
+        });
+      }
+    });
+  }
+
+  /**
+   * @param {Note} note
    * @param {string} text
    * @param {boolean} readOnly
    * @returns {EditorState}
    */
-  createEditorState(text, readOnly) {
+  createEditorState(note, text, readOnly) {
+    log(`Editor.createEditorState, note:`, note);
     let editor = this;
+    this.clearCachedParsedMarkdown();
     let touchCount = 0;
     const commandKeyBindings = [];
-    let pageName = this.pageName;
     for (const def of this.editorCommands.values()) {
       if (def.command.key) {
         commandKeyBindings.push({
@@ -712,14 +875,16 @@ export class Editor {
       ]),
       EditorView.domEventHandlers({
         touchmove: (event, view) => {
+          log("touchmove", event, view);
           touchCount++;
         },
         touchend: (event, view) => {
+          log("touchend", event, view);
           if (touchCount === 0) {
             safeRun(async () => {
               const touch = event.changedTouches.item(0);
               const clickEvent = {
-                page: pageName,
+                page: note,
                 ctrlKey: event.ctrlKey,
                 metaKey: event.metaKey,
                 altKey: event.altKey,
@@ -734,13 +899,15 @@ export class Editor {
           touchCount = 0;
         },
         mousedown: (event, view) => {
+          log("mousedown", event);
           if (!event.altKey && event.target instanceof Element) {
             const parentA = event.target.closest("a");
             if (parentA) {
+              log("mousedown: parentA:", parentA);
               event.stopPropagation();
               event.preventDefault();
               const clickEvent = {
-                page: pageName,
+                page: note,
                 ctrlKey: event.ctrlKey,
                 metaKey: event.metaKey,
                 altKey: event.altKey,
@@ -756,9 +923,10 @@ export class Editor {
           }
         },
         click: (event, view) => {
+          log("click:", event, view);
           safeRun(async () => {
             const clickEvent = {
-              page: pageName,
+              page: note,
               ctrlKey: event.ctrlKey,
               metaKey: event.metaKey,
               altKey: event.altKey,
@@ -772,11 +940,11 @@ export class Editor {
         class {
           update(update) {
             if (update.docChanged) {
-              editor.cachedParsedMarkdown = null;
+              editor.clearCachedParsedMarkdown();
+              editor.viewState.unsavedChanges = true;
               editor.viewDispatch({ type: "page-changed" });
               editor.debouncedUpdateEvent();
-              editor.docChanged();
-              // editor.save().catch((e) => console.error("Error saving", e));
+              editor.save(false).catch((e) => console.error("Error saving", e));
             }
           }
         }
@@ -913,28 +1081,33 @@ export class Editor {
   cachedParsedMarkdown;
   cachedParsedMarkdownWithParents;
 
+  clearCachedParsedMarkdown() {
+    this.cachedParsedMarkdown = null;
+    this.cachedParsedMarkdownWithParents = null;
+  }
+
   getParsedMarkdown(withParents = false) {
     if (withParents) {
       if (this.cachedParsedMarkdownWithParents) {
-        log(
-          "editor.getParseMarkdown: returning cachedParsedMarkdownWithParents"
-        );
+        // log(
+        //   "editor.getParseMarkdown: returning cachedParsedMarkdownWithParents"
+        // );
         return this.cachedParsedMarkdownWithParents;
       }
     }
     if (this.cachedParsedMarkdown) {
-      log("editor.getParseMarkdown: returning cachedParsedMarkdown");
+      // log("editor.getParseMarkdown: returning cachedParsedMarkdown");
       return this.cachedParsedMarkdown;
     }
 
     if (withParents) {
-      log("editor.getParseMarkdown: parsing with parents");
+      // log("editor.getParseMarkdown: parsing with parents");
       const text = this.getText();
       this.cachedParsedMarkdownWithParents = parse(this.markdownLang, text);
       addParentPointers(this.cachedParsedMarkdownWithParents);
       return this.cachedParsedMarkdownWithParents;
     }
-    log("editor.getParseMarkdown: parsing");
+    // log("editor.getParseMarkdown: parsing");
     const text = this.getText();
     this.cachedParsedMarkdown = parse(this.markdownLang, text);
     return this.cachedParsedMarkdown;
@@ -946,12 +1119,6 @@ export class Editor {
   getText() {
     let s = this.editorView?.state.sliceDoc();
     return s;
-  }
-
-  setText(s) {
-    // TODO: better way
-    let state = this.createEditorState(s, false);
-    this.editorView.setState(state);
   }
 
   async completeWithEvent(context, eventName) {
@@ -986,8 +1153,79 @@ export class Editor {
     return this.completeWithEvent(context, "editor:complete");
   }
 
-  focus() {
-    focusEditorView(this.editorView);
+  /**
+   *
+   * @param {Note} note
+   */
+  restoreState(note) {
+    log("Editor.restoreState", note);
+    const pageState = this.openPages.get(note);
+    const editorView = this.editorView;
+    if (pageState) {
+      editorView.scrollDOM.scrollTop = pageState.scrollTop;
+      editorView.dispatch({
+        selection: pageState.selection,
+        scrollIntoView: true,
+      });
+    } else {
+      editorView.scrollDOM.scrollTop = 0;
+      editorView.dispatch({
+        selection: { anchor: 0 },
+        scrollIntoView: true,
+      });
+    }
+    editorView.focus();
+    return !!pageState;
+  }
+
+  /**
+   *
+   * @param {Note} note
+   */
+  saveState(note) {
+    this.openPages.set(
+      note,
+      new PageState(
+        this.editorView.scrollDOM.scrollTop,
+        this.editorView.state.selection
+      )
+    );
+  }
+
+  save(immediate = false) {
+    log(`Editor.save`, immediate);
+    let timeoutMs = immediate ? 0 : saveInterval;
+    return new Promise((resolve, reject) => {
+      if (this.saveTimeout) {
+        clearTimeout(this.saveTimeout);
+      }
+      this.saveTimeout = setTimeout(() => {
+        if (this.currentNote) {
+          if (!this.viewState.unsavedChanges) {
+            return resolve();
+          }
+          let note = this.currentNote;
+          log("Saving note", note);
+          this.viewState.unsavedChanges = false;
+          let s = this.getText();
+          addNoteVersion(note, s)
+            .then(() => {
+              this.viewDispatch({ type: "page-saved" });
+              resolve();
+            })
+            .catch((e) => {
+              this.flashNotification(
+                "Could not save page, retrying again in 10 seconds",
+                "error"
+              );
+              this.saveTimeout = setTimeout(this.save.bind(this), 1e4);
+              reject(e);
+            });
+        } else {
+          resolve();
+        }
+      }, timeoutMs);
+    });
   }
 
   // TODO: not sure if this is the right place for this

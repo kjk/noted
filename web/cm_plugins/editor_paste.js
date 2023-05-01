@@ -1,10 +1,7 @@
 import { EditorView, ViewPlugin } from "../deps.js";
-import {
-  tables,
-  taskListItems,
-} from "https://cdn.skypack.dev/@joplin/turndown-plugin-gfm@1.0.45";
+import { tables, taskListItems } from "@joplin/turndown-plugin-gfm";
 
-import TurndownService from "https://cdn.skypack.dev/turndown@7.1.1";
+import TurndownService from "turndown";
 import { maximumAttachmentSize } from "../types.js";
 import { safeRun } from "../plugos/util.js";
 

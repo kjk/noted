@@ -1,63 +1,109 @@
+import {
+  getNoteByEncodedTitle,
+  getNoteByID,
+  getNoteID,
+  getNoteTitle,
+} from "./notesStore";
+
+import { log } from "./lib/log";
 import { safeRun } from "./plugos/util";
 
-function encodePageUrl(name) {
-  return "n/" + name.replaceAll(" ", "_");
+// not great but "-" is returned by nanoid()
+const idSep = "~";
+
+/** @typedef {import("./notesStore").Note} Note */
+
+/**
+ *
+ * @param {Note} note
+ * @returns {string}
+ */
+export function encodeNoteURL(note) {
+  let title = getNoteTitle(note);
+  let id = getNoteID(note);
+  return encodeURIComponent(title) + idSep + id;
 }
 
-function decodePageUrl(url) {
-  let s = url.replaceAll("_", " ");
-  if (s.startsWith("n/")) {
-    s = s.slice(2);
+/**
+ * @returns {[string, string|number]}
+ */
+function decodePageURL() {
+  let path = location.pathname;
+  log("decodePageURL: path", path);
+  path = path.substring(3); // trim /n/ at the beginning
+  let noteURL = globalThis.decodeURIComponent(path);
+  const [title, pos] = noteURL.split("@");
+  if (pos) {
+    if (pos.match(/^\d+$/)) {
+      return [title, +pos];
+    } else {
+      return [title, pos];
+    }
+  } else {
+    return [title, 0];
   }
-  return s;
 }
 
 export class PathPageNavigator {
-  constructor(indexPage, root = "") {
+  /** @type {Note} */
+  indexPage;
+
+  /**
+   * @param {Note} indexPage
+   */
+  constructor(indexPage) {
     this.indexPage = indexPage;
-    this.root = root;
   }
-  async navigate(page, pos, replaceState = false) {
-    let encodedPage = encodePageUrl(page);
-    if (page === this.indexPage) {
-      encodedPage = "";
+
+  /**
+   * @param {Note} note
+   * @param {number|string} pos
+   * @param {boolean} replaceState
+   */
+  async navigate(note, pos, replaceState = false) {
+    let uri = "";
+    if (note !== null && note !== this.indexPage) {
+      uri = "/n/" + encodeNoteURL(note);
     }
+    let noteID = getNoteID(note);
     if (replaceState) {
-      window.history.replaceState(
-        { page, pos },
-        page,
-        `${this.root}/${encodedPage}`
-      );
+      window.history.replaceState({ noteID, pos }, "", uri);
     } else {
-      window.history.pushState(
-        { page, pos },
-        page,
-        `${this.root}/${encodedPage}`
-      );
+      window.history.pushState({ noteID, pos }, "", uri);
     }
     globalThis.dispatchEvent(
       new PopStateEvent("popstate", {
-        state: { page, pos },
+        state: { noteID, pos },
       })
     );
     await new Promise((resolve) => {
       this.navigationResolve = resolve;
     });
-    this.navigationResolve = void 0;
+    this.navigationResolve = null;
   }
 
   subscribe(pageLoadCallback) {
+    log("PathPageNavigator.subscribe");
     const cb = (event) => {
-      const gotoPage = this.getCurrentPage();
-      console.log("subscribe: gotoPage", gotoPage);
-      if (!gotoPage) {
-        return;
+      log("PathPageNavigator.subscribe.cb: event", event);
+      let note = null;
+      /** @type {string|number} */
+      let pos = 0;
+      if (event?.state?.noteID) {
+        note = getNoteByID(event.state.noteID);
+        pos = event.state.pos;
       }
-      safeRun(async () => {
-        await pageLoadCallback(
-          this.getCurrentPage(),
-          event?.state?.pos || this.getCurrentPos()
+      if (!note) {
+        let [title, pagePos] = decodePageURL();
+        log(
+          `PathPageNavigator.subscribe.cb: title: '${title}', pagePos: ${pagePos}`
         );
+        note = getNoteByEncodedTitle(title);
+        pos = pagePos;
+      }
+      log("PathPageNavigator.subscribe.cb: note", note, "pos", pos);
+      safeRun(async () => {
+        await pageLoadCallback(note, pos);
         if (this.navigationResolve) {
           this.navigationResolve();
         }
@@ -65,28 +111,5 @@ export class PathPageNavigator {
     };
     globalThis.addEventListener("popstate", cb);
     cb();
-  }
-
-  decodeURI() {
-    const [page, pos] = decodeURI(
-      location.pathname.substring(this.root.length + 1)
-    ).split("@");
-    if (pos) {
-      if (pos.match(/^\d+$/)) {
-        return [page, +pos];
-      } else {
-        return [page, pos];
-      }
-    } else {
-      return [page, 0];
-    }
-  }
-
-  getCurrentPage() {
-    return decodePageUrl(this.decodeURI()[0]) || this.indexPage;
-  }
-
-  getCurrentPos() {
-    return this.decodeURI()[1];
   }
 }

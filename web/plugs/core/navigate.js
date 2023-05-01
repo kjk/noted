@@ -36,6 +36,7 @@ async function actionClickOrActionEnter(mdTree, inNewWindow = false) {
     }
   }
 
+  log("actionClickOrActionEnter", mdTree.type);
   switch (mdTree.type) {
     case "WikiLink": {
       let pageLink = mdTree.children[1].children[0].text;
@@ -101,6 +102,10 @@ export async function linkNavigate() {
   const mdTree = editor.getParsedMarkdown(true);
   let pos = await editor.getCursor();
   const newNode = nodeAtPos(mdTree, pos);
+  if (!newNode) {
+    log("clickNavigate: no node at pos", event.pos);
+    return;
+  }
   await actionClickOrActionEnter(newNode);
 }
 
@@ -108,9 +113,13 @@ export async function clickNavigate(event) {
   if (event.altKey) {
     return;
   }
-  log("clickNavigate");
+  log("clickNavigate:", event);
   const mdTree = editor.getParsedMarkdown(true);
   const newNode = nodeAtPos(mdTree, event.pos);
+  if (!newNode) {
+    log("clickNavigate: no node at pos", event.pos);
+    return;
+  }
   await actionClickOrActionEnter(newNode, event.ctrlKey || event.metaKey);
 }
 
