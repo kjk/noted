@@ -506,14 +506,6 @@ export async function filterDataTransferEntries(dt, fnAllowed = null) {
 }
 
 /**
- * @param {number} n
- * @returns {string}
- */
-export function genRandomID(n) {
-  return nanoid(n);
-}
-
-/**
  * split("a.b.c", "." 2) => ["a" "b.c"]
  * which is different from "a.b.c".split(".",2) => ["a", "b"]
  * @param {string} s

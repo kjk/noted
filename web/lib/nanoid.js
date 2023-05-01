@@ -31,3 +31,11 @@ export function nanoid(size = 21) {
   }, "");
   return res;
 }
+
+/**
+ * @param {number} n
+ * @returns {string}
+ */
+export function genRandomID(n) {
+  return nanoid(n);
+}
