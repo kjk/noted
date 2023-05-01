@@ -14,6 +14,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve("web", "index.html"),
+        not_found: resolve("web", "404.html"),
         // test: resolve("web", "test.html"),
       },
 

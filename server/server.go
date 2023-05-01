@@ -6,11 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -307,6 +309,21 @@ func postWithHeaders(uri string, hdrs map[string]string) (*http.Response, error)
 	return resp, err
 }
 
+var (
+	data404 []byte
+)
+
+func read404(dir string) []byte {
+	if data404 != nil && !isDev() {
+		return data404
+	}
+	path := filepath.Join(dir, "404.html")
+	d, err := ioutil.ReadFile(path)
+	must(err)
+	data404 = d
+	return d
+}
+
 // in dev, proxyHandler redirects assets to vite web server
 // in prod, assets must be pre-built in web/dist directory
 func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
@@ -386,7 +403,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			// those are actually index.html to change r.URL
 			// to force that codepath
 			uris := []string{"/github_login_failed"}
-			if slices.Contains(uris, uri) {
+			if slices.Contains(uris, uri) || strings.HasPrefix(uri, "/n/") {
 				var err error
 				r.URL, err = url.Parse("/")
 				must(err)
@@ -403,7 +420,11 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			return
 		}
 
-		http.NotFound(w, r)
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		d := read404(distDir)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(d)
 	}
 
 	handlerWithMetrics := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -434,7 +455,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 		Handler:      http.HandlerFunc(handlerWithMetrics),
 	}
 	httpAddr := fmt.Sprintf(":%d", httpPort)
-	if isDev() {
+	if isDev() || isWinOrMac() {
 		httpAddr = "localhost" + httpAddr
 	}
 	httpSrv.Addr = httpAddr
