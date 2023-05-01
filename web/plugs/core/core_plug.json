@@ -243,35 +243,6 @@
       "command": {
         "name": "Stats: Show"
       }
-    },
-    "readPageCloud": {
-      "path": "./cloud.ts:readFileCloud",
-      "env": "server",
-      "pageNamespace": {
-        "pattern": "💭 .+",
-        "operation": "readFile"
-      }
-    },
-    "getPageMetaCloud": {
-      "path": "./cloud.ts:getFileMetaCloud",
-      "env": "server",
-      "pageNamespace": {
-        "pattern": "💭 .+",
-        "operation": "getFileMeta"
-      }
-    },
-    "toggleVimMode": {
-      "path": "./vim.ts:toggleVimMode",
-      "command": {
-        "name": "Editor: Toggle Vim Mode"
-      }
-    },
-    "loadVimRc": {
-      "path": "./vim.ts:loadVimRc",
-      "command": {
-        "name": "Editor: Vim: Load VIMRC"
-      },
-      "events": ["editor:modeswitch"]
     }
   }
 }

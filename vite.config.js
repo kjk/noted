@@ -52,7 +52,6 @@ export default defineConfig({
             "@codemirror/lang-xml",
             "@codemirror/lang-json",
             "@replit/codemirror-lang-svelte",
-            "@replit/codemirror-vim",
 
             "@codemirror/lang-rust",
             "@codemirror/lang-sql",

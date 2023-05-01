@@ -13,9 +13,6 @@ export {
 } from "@codemirror/autocomplete";
 export { styleTags, Tag, tagHighlighter, tags } from "@lezer/highlight";
 export * as YAML from "js-yaml";
-// export * as YAML from "https://deno.land/std@0.177.0/encoding/yaml.js";
-// export * as path from "https://deno.land/std@0.177.0/path/mod.js";
-// export { readAll } from "https://deno.land/std@0.165.0/streams/conversion.js";
 export {
   Emoji,
   GFM,
@@ -109,5 +106,3 @@ export {
   Home as HomeIcon,
   Terminal as TerminalIcon,
 } from "preact-feather";
-
-export { getCM as vimGetCm, Vim, vim } from "@replit/codemirror-vim";

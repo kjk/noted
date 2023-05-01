@@ -120,7 +120,3 @@ export function getUiOption(key) {
 export function setUiOption(key, value) {
   return syscall("editor.setUiOption", key, value);
 }
-
-export function vimEx(exCommand) {
-  return syscall("editor.vimEx", exCommand);
-}

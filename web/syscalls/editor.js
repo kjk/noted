@@ -1,7 +1,4 @@
-import { Vim, vimGetCm } from "../deps.js";
-
 /**
- *
  * @param {import("../editor.js").Editor} editor
  * @returns
  */
@@ -113,10 +110,6 @@ export function editorSyscalls(editor) {
         key,
         value,
       });
-    },
-    "editor.vimEx": (_ctx, exCommand) => {
-      const cm = vimGetCm(editor.editorView);
-      return Vim.handleEx(cm, exCommand);
     },
   };
   return syscalls;
