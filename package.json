@@ -63,6 +63,7 @@
     "idb": "^7.1.1",
     "js-base64": "^3.7.5",
     "js-yaml": "^4.1.0",
+    "kiss-crypto": "^0.2.0",
     "marked": "^4.2.12",
     "preact": "^10.13.2",
     "preact-feather": "^4.2.1",
