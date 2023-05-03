@@ -330,12 +330,12 @@
       bind:textContent={title}
       role="textbox"
       aria-multiline="false"
-      class="note-title px-2 ml-[-0.125rem] user-modify-plain text-xl font-semibold focus-within:outline-none bg-white placeholder:italic hover:bg-gray-50 border-t border-l border-r border-gray-400 rounded-t-md"
+      class="note-title px-2 ml-[-0.125rem] user-modify-plain text-lg font-semibold focus-within:outline-none bg-white placeholder:italic hover:bg-gray-50 border-t border-l border-r border-gray-400 rounded-t-md"
     />
     <button
       use:gtooltip={"create new note"}
       on:click={() => createNewNote("")}
-      class="cursor-pointer text-xl px-2 hover:bg-gray-50"
+      class="cursor-pointer text-lg px-2 hover:bg-gray-50"
     >
       +
     </button>

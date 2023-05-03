@@ -1,8 +1,3 @@
-import "./css/base.css";
-import "./css/editor.css";
-import "./css/modals.css";
-import "./css/theme.css";
-import "/fonts/inter.css";
 import "./css/main.css";
 
 import App from "./Noted.svelte";

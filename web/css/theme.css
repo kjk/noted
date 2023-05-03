@@ -2,11 +2,13 @@
   --highlight-color: #464cfc;
   --directive-border-color: #0000000f;
   --directive-font-color: #5b5b5b;
-  --ui-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+
+  --ui-font: "iA-Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* --editor-font: "iA-Mono", "Menlo"; */
-  --editor-font: "Inter, iA-Mono", "Cascadia Code2", "Cascadia Mono2",
+
+  --editor-font: "iA-Mono", "Cascadia Code2", "Cascadia Mono2",
     "Lucida Console2", "Consolas", -apple-system, system-ui, BlinkMacSystemFont,
     "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
     "Droid Sans", "Helvetica Neue", sans-serif;

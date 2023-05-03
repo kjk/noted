@@ -1,0 +1,27 @@
+@font-face {
+  font-family: "iA-Mono";
+  src: url("../fonts/iAWriterMonoS-Regular.woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "iA-Mono";
+  src: url("../fonts/iAWriterMonoS-Bold.woff2");
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "iA-Mono";
+  src: url("../fonts/iAWriterMonoS-Italic.woff2");
+  font-weight: normal;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "iA-Mono";
+  src: url("../fonts/iAWriterMonoS-BoldItalic.woff2");
+  font-weight: bold;
+  font-style: italic;
+}
