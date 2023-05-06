@@ -13,13 +13,12 @@
     changeToLocalStore,
     deleteNote,
     getNoteLastModified,
-    getNoteID,
     deleteRemoteStoreCache,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
   import GitHub from "./icons/GitHub.svelte";
-  import { userInfo, logout, getLoggedUser } from "./lib/login";
+  import { userInfo, getLoggedUser } from "./lib/login";
   import SvgArrowDown from "./svg/SvgArrowDown.svelte";
   import CommandPalette, {
     kSelectedCommand,
@@ -28,7 +27,7 @@
   import browser from "./lib/browser";
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
   import { log } from "./lib/log";
-  import { encodeNoteURL, setNavigationCallback } from "./navigator";
+  import { setNavigationCallback } from "./navigator";
 
   let commandPaletteNotes = [];
   let commandPalettePageNames = [];
@@ -48,7 +47,7 @@
     newNoteShortcut = "<tt>Ctrl + N</tt>";
   }
 
-  let notes = [];
+  let notesCount = 0;
 
   /** @type {HTMLElement} */
   let editorElement;
@@ -99,7 +98,8 @@
   async function deleteCurrentNote() {
     let note = editor.currentNote;
     log("deleteCurrentNote:", note);
-    notes = await deleteNote(note);
+    let notes = await deleteNote(note);
+    notesCount = len(notes);
     editor.navigate(null);
   }
 
@@ -125,6 +125,7 @@
 
   async function runCommandPalette(startWithCommands) {
     // log("selectPage");
+    let notes = await getNotes();
     commandPaletteNotes = sortNotesByLastModified(notes);
     // in-place replace note by its title
     let nNotes = len(commandPaletteNotes);
@@ -228,7 +229,8 @@
     if (title === "") {
       titleEl.focus();
     }
-    notes = await getNotes();
+    let notes = await getNotes();
+    notesCount = len(notes);
   }
 
   /**
@@ -309,9 +311,9 @@
     } else {
       await useRemoteStore();
     }
-    notes = await getNotes();
-    let nNotes = len(notes);
-    log("notes:", nNotes);
+    let notes = await getNotes();
+    notesCount = len(notes);
+    log("notes:", notesCount);
 
     log("Noted.onMount: editor:", editor);
     if (!editor) {
@@ -369,8 +371,8 @@
       use:gtooltip={cmdPaletteShortcut}
       class="cursor-pointer text-sm flex items-center gap-x-2 hover:bg-gray-100 px-2 py-0.5"
     >
-      <div>{len(notes)}</div>
-      <div>{pluralize("note", len(notes))}</div>
+      <div>{notesCount}</div>
+      <div>{pluralize("note", notesCount)}</div>
       <SvgArrowDown class="w-2 h-2" />
     </div>
     <button
