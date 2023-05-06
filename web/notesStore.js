@@ -458,16 +458,34 @@ export class StoreRemote extends StoreCommon {
   constructor() {
     super();
 
-    this.db = createKVStoresDB("noted-remote", [
+    this.db = StoreRemote.openDB();
+
+    this.kvContentCache = new KV(this.db, "content-cache");
+    this.kvLogsCache = new KV(this.db, "logs-cache");
+  }
+
+  static openDB() {
+    let db = createKVStoresDB("noted-remote", [
       "content-cache",
       "logs-cache",
 
       "content-temp",
       "logs-temp",
     ]);
+    return db;
+  }
 
-    this.kvContentCache = new KV(this.db, "content-cache");
-    this.kvLogsCache = new KV(this.db, "logs-cache");
+  static async deleteCache() {
+    log("StoreRemote.deleteCache");
+    let db = StoreRemote.openDB();
+    let kv = new KV(db, "content-cache");
+    await kv.clear();
+    kv = new KV(db, "logs-cache");
+    await kv.clear();
+    // kv = new KV(db, "content-temp")
+    // await kv.clear()
+    // kv = new KV(db, "logs-temp")
+    // await kv.clear()
   }
 
   async storeGetLogs(start) {
@@ -684,6 +702,10 @@ export class StoreRemote extends StoreCommon {
     let notes = await this.appendAndApplyLog(e);
     return notes;
   }
+}
+
+export function deleteRemoteStoreCache() {
+  StoreRemote.deleteCache();
 }
 
 /** @type {StoreLocal | StoreRemote} */

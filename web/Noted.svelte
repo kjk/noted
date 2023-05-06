@@ -14,6 +14,7 @@
     deleteNote,
     getNoteLastModified,
     getNoteID,
+    deleteRemoteStoreCache,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -237,13 +238,6 @@
     notes = await getNotes();
   }
 
-  async function logoutGitHub() {
-    log("logoutGitHub");
-    logout();
-    changeToLocalStore();
-    editor.navigate(null);
-  }
-
   /**
    * returns a copy of notes sorted by last modified
    * notes most recently modified are first
@@ -267,8 +261,8 @@
   }
 
   async function useRemoteStore() {
-    // TODO: clear local store data
     changeToRemoteStore();
+    deleteRemoteStoreCache();
   }
 
   function flashNotification(msg, type) {
@@ -376,9 +370,9 @@
           <div
             class="hidden absolute text-sm flex-col border shadow left-0 top-full py-2 z-20 group-hover:flex bg-white"
           >
-            <button
-              on:click={logoutGitHub}
-              class="hover:bg-gray-100 py-0.5 px-4 min-w-[6rem]">Logout</button
+            <a
+              href="/auth/ghlogout"
+              class="hover:bg-gray-100 py-0.5 px-4 min-w-[6rem]">Logout</a
             >
           </div>
         </div>

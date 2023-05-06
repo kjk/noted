@@ -177,8 +177,8 @@ func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	logf(ctx, "handleLogoutGitHub()\n")
 	cookie := getSecureCookie(r)
 	if cookie == nil {
-		logf(ctx, "handleLogoutGitHub: no cookie\n")
-		serveError(w, "no cookie", http.StatusBadRequest)
+		logf(ctx, "handleLogoutGitHub: already logged out\n")
+		http.Redirect(w, r, "/", http.StatusFound) // 302
 		return
 	}
 	email := cookie.Email
@@ -186,8 +186,7 @@ func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	muStore.Lock()
 	defer muStore.Unlock()
 	delete(emailToUserInfo, email)
-
-	serveText(w, http.StatusOK, "ok")
+	http.Redirect(w, r, "/", http.StatusFound) // 302
 }
 
 const errorURL = "/github_login_failed"
