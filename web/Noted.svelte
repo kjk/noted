@@ -28,7 +28,7 @@
   import browser from "./lib/browser";
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
   import { log } from "./lib/log";
-  import { encodeNoteURL } from "./navigator";
+  import { encodeNoteURL, setNavigationCallback } from "./navigator";
 
   let commandPaletteNotes = [];
   let commandPalettePageNames = [];
@@ -263,6 +263,42 @@
     log("flashNotification:", msg, type);
   }
 
+  async function onNavigate(notes) {
+    log("onNavigate: notes", notes);
+    if (!editor || !editor.editorView) {
+      return;
+    }
+    let first = notes[0];
+    let note = first[0];
+    let pos = first[1];
+    const stateRestored = await editor.loadPage(note);
+    if (pos) {
+      if (typeof pos === "string") {
+        log("Navigating to anchor", pos);
+        const posLookup = 0;
+        // const posLookup = await this.system.localSyscall(
+        //   "core",
+        //   "index.get",
+        //   [pageName, `a:${pageName}:${pos}`]
+        // );
+        if (!posLookup) {
+          return editor.flashNotification(
+            `Could not find anchor @${pos}`,
+            "error"
+          );
+        } else {
+          pos = +posLookup;
+        }
+      }
+      editor.editorView.dispatch({
+        selection: { anchor: pos },
+        scrollIntoView: true,
+      });
+    } else if (!stateRestored) {
+      editor.setCursorPastFrontMatter();
+    }
+  }
+
   onMount(async () => {
     log("Noted.onMount, id:");
 
@@ -291,7 +327,7 @@
       setEditor(editor);
       await editor.init();
     }
-
+    setNavigationCallback(onNavigate);
     document.addEventListener("keydown", onKeyDown);
   });
 

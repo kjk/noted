@@ -71,7 +71,7 @@ import { deletePage, pageComplete } from "./plugs/core/page.js";
 import {
   encodeNoteURL,
   navigateToNotes,
-  setPageLoadCallback,
+  setNavigationCallback,
 } from "./navigator.js";
 import { len, throttle, throwIf } from "./lib/util.js";
 
@@ -586,52 +586,6 @@ export class Editor {
 
   async init() {
     log("Editor.init");
-
-    setPageLoadCallback(async (notes) => {
-      log("Editor: Now navigating to", notes);
-      if (!this.editorView) {
-        return;
-      }
-      let first = notes[0];
-      let note = first[0];
-      let pos = first[1];
-      const stateRestored = await this.loadPage(note);
-      if (pos) {
-        if (typeof pos === "string") {
-          console.log("Navigating to anchor", pos);
-          const posLookup = 0;
-          // const posLookup = await this.system.localSyscall(
-          //   "core",
-          //   "index.get",
-          //   [pageName, `a:${pageName}:${pos}`]
-          // );
-          if (!posLookup) {
-            return this.flashNotification(
-              `Could not find anchor @${pos}`,
-              "error"
-            );
-          } else {
-            pos = +posLookup;
-          }
-        }
-        this.editorView.dispatch({
-          selection: { anchor: pos },
-          scrollIntoView: true,
-        });
-      } else if (!stateRestored) {
-        const pageText = this.editorView.state.sliceDoc();
-        let initialCursorPos = 0;
-        const match = frontMatterRegex.exec(pageText);
-        if (match) {
-          initialCursorPos = match[0].length;
-        }
-        this.editorView.scrollDOM.scrollTop = 0;
-        this.editorView.dispatch({
-          selection: { anchor: initialCursorPos },
-          scrollIntoView: true,
-        });
-      }
-    });
   }
 
   /**
@@ -1128,6 +1082,20 @@ export class Editor {
     return s;
   }
 
+  setCursorPastFrontMatter() {
+    let editor = this;
+    const pageText = editor.getText();
+    let initialCursorPos = 0;
+    const match = frontMatterRegex.exec(pageText);
+    if (match) {
+      initialCursorPos = match[0].length;
+    }
+    editor.editorView.scrollDOM.scrollTop = 0;
+    editor.editorView.dispatch({
+      selection: { anchor: initialCursorPos },
+      scrollIntoView: true,
+    });
+  }
   async completeWithEvent(context, eventName) {
     log("completeWithEvent eventName:", eventName);
     const editorState = context.state;

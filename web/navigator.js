@@ -96,7 +96,7 @@ export async function navigateToNotes(notes, replaceState = false) {
   navigationResolve = null;
 }
 
-let pageLoadCallback = null;
+let navigationCallback = null;
 
 function onPopState(event) {
   log("onPopState: event", event);
@@ -116,16 +116,16 @@ function onPopState(event) {
   }
   log("onPopState: notes", notes);
   safeRun(async () => {
-    await pageLoadCallback(notes);
+    await navigationCallback(notes);
     if (navigationResolve) {
       navigationResolve();
     }
   });
 }
 
-export function setPageLoadCallback(cb) {
-  pageLoadCallback = cb;
-  if (pageLoadCallback) {
+export function setNavigationCallback(cb) {
+  navigationCallback = cb;
+  if (navigationCallback) {
     onPopState();
   }
 }

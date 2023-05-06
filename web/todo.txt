@@ -1,6 +1,6 @@
  tabs
 --- tabs
 
-- move setPageLoadCallback() to Noted.svelte
+- [x] move setNavigationCallback() to Noted.svelte
 - indicate currently selected tab in the url (e.g. by appeding ;2 at the end, which indicates that tab 2 is selected)
 - move Editor.navigate() to Noted.svelte and make it handle tabs. if navigating to a tab that is already opened, simply switches to that tab. If navigates to new note, replace current tab with that note. Maybe add a flag "newTab" which will open a new tab instead of replacing content
