@@ -68,7 +68,11 @@ import {
 } from "./cm_plugins/editor_paste.js";
 import { clickNavigate, linkNavigate } from "./plugs/core/navigate.js";
 import { deletePage, pageComplete } from "./plugs/core/page.js";
-import { encodeNoteURL, navigate, setPageLoadCallback } from "./navigator.js";
+import {
+  encodeNoteURL,
+  navigateToNotes,
+  setPageLoadCallback,
+} from "./navigator.js";
 import { len, throttle, throwIf } from "./lib/util.js";
 
 import { CodeWidgetHook } from "./hooks/code_widget.js";
@@ -498,7 +502,8 @@ export class Editor {
       return;
     }
 
-    await navigate(note, pos, replaceState);
+    let notes = [[note, pos]];
+    await navigateToNotes(notes, replaceState);
   }
 
   /**
@@ -582,11 +587,14 @@ export class Editor {
   async init() {
     log("Editor.init");
 
-    setPageLoadCallback(async (note, pos) => {
-      log("Editor: Now navigating to", note);
+    setPageLoadCallback(async (notes) => {
+      log("Editor: Now navigating to", notes);
       if (!this.editorView) {
         return;
       }
+      let first = notes[0];
+      let note = first[0];
+      let pos = first[1];
       const stateRestored = await this.loadPage(note);
       if (pos) {
         if (typeof pos === "string") {

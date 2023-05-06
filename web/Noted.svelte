@@ -88,16 +88,9 @@
     log("viewDispatch:", args);
     switch (kind) {
       case "page-loaded":
+        // TODO: fix up url if doesn't represent the state exactly
         let note = args.note;
         title = getNoteTitle(note);
-        let noteURL = "/n/" + encodeNoteURL(note);
-        let path = window.location.pathname;
-        if (path !== "" && path != noteURL) {
-          log("viewDispatch: replaceState:", noteURL, "path:", path);
-          let noteID = getNoteID(note);
-          let pos = 0;
-          window.history.replaceState({ noteID, pos }, noteID, noteURL);
-        }
         document.title = title;
         break;
     }
