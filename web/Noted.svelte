@@ -29,6 +29,20 @@
   import { log } from "./lib/log";
   import { setNavigationCallback } from "./navigator";
 
+  class TabInfo {
+    /** @type {Note} */
+    note = null;
+    title = "";
+    isCurrent = false;
+
+    constructor(title = "") {
+      this.title = title;
+    }
+  }
+
+  /** @type {TabInfo[]}*/
+  let tabs = [];
+
   let commandPaletteNotes = [];
   let commandPalettePageNames = [];
   let commandPaletteCommands = ["Delete Note"];
@@ -55,14 +69,6 @@
   let editor;
   let errorMsg = "";
 
-  let title;
-  /** @type {HTMLElement}*/
-  let titleEl;
-
-  let debouncedTitleChanged = debounce(titleChanged, 500);
-
-  $: debouncedTitleChanged(title);
-
   async function titleChanged(title) {
     if (!title || !editor) {
       return;
@@ -77,7 +83,6 @@
     }
     log(`titleChanged: '${prevTitle}' => '${title}'`);
     setNoteTitle(note, title);
-    // notes = notes;
   }
 
   let flashMsg = "";
@@ -89,7 +94,7 @@
       case "page-loaded":
         // TODO: fix up url if doesn't represent the state exactly
         let note = args.note;
-        title = getNoteTitle(note);
+        let title = getNoteTitle(note);
         document.title = title;
         break;
     }
@@ -202,33 +207,10 @@
     }
   }
 
-  /**
-   * @param {KeyboardEvent} ev
-   */
-  function onTitleKeyDown(ev) {
-    if (ev.key === "Enter" || ev.key === "Escape") {
-      ev.stopPropagation();
-      ev.preventDefault();
-      editor.focus();
-      return;
-    }
-    if (ev.key === "ArrowDown") {
-      ev.stopPropagation();
-      ev.preventDefault();
-      // TODO: set cursor to start of editor
-      editor.moveCursor(0);
-      editor.focus();
-      return;
-    }
-  }
-
   async function createNewNote(title = "") {
     log("createNewNote");
     let n = await newNote(title);
     await editor.navigate(n);
-    if (title === "") {
-      titleEl.focus();
-    }
     let notes = await getNotes();
     notesCount = len(notes);
   }
@@ -273,6 +255,18 @@
     let first = notes[0];
     let note = first[0];
     let pos = first[1];
+    let ti = new TabInfo();
+    ti.note = note;
+    ti.title = getNoteTitle(note);
+    ti.isCurrent = true;
+    let newTabs = [ti];
+    newTabs.push(new TabInfo("another tab"));
+    newTabs.push(new TabInfo("another tab"));
+    newTabs.push(new TabInfo("another tab"));
+    newTabs.push(new TabInfo("another tab"));
+    newTabs.push(new TabInfo("another tab"));
+    newTabs.push(new TabInfo("another tab"));
+
     const stateRestored = await editor.loadPage(note);
     if (pos) {
       if (typeof pos === "string") {
@@ -299,6 +293,32 @@
     } else if (!stateRestored) {
       editor.setCursorPastFrontMatter();
     }
+    tabs = newTabs;
+    log("tabs:", tabs);
+  }
+
+  function selectTab(idx) {
+    for (let tab of tabs) {
+      tab.isCurrent = false;
+    }
+    tabs[idx].isCurrent = true;
+    tabs = tabs;
+  }
+
+  function closeTab(idx) {
+    let deletedTabs = tabs.splice(idx, 1);
+    tabs = tabs;
+    // if removed current tab, set another tab as current
+    for (let tab of tabs) {
+      if (tab.isCurrent) {
+        return;
+      }
+    }
+    let nTabs = len(tabs);
+    if (idx >= nTabs) {
+      idx = nTabs - 1;
+    }
+    tabs[idx].isCurrent = true;
   }
 
   onMount(async () => {
@@ -343,20 +363,28 @@
 
 <div id="sb-root" class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
   <div
-    class="mx-[22px] flex items-center max-w-[var(--editor-width)] px-[20px]"
+    class="mx-[22px] flex items-center overflow-auto max-w-[var(--editor-width)] px-[20px]"
   >
-    <div
-      tabindex="0"
-      use:gtooltip={"click to edit title"}
-      bind:this={titleEl}
-      on:keydown={onTitleKeyDown}
-      contenteditable="true"
-      placeholder="note title..."
-      bind:textContent={title}
-      role="textbox"
-      aria-multiline="false"
-      class="note-title px-2 ml-[-0.125rem] user-modify-plain text-lg font-semibold focus-within:outline-none bg-white placeholder:italic hover:bg-gray-50 border-t border-l border-r border-gray-400 rounded-t-md"
-    />
+    {#each tabs as tab, idx}
+      {@const isActive = tab.isCurrent}
+      {@const cls = isActive ? "active-tab" : ""}
+      {@const tt = tab.title}
+      <div
+        use:gtooltip={tt}
+        class="flex shrink min-w-0 group note-title ml-[-0.125rem] user-modify-plain text-lg font-semibold bg-white hover:bg-gray-50 hover:cursor-pointer {cls}"
+      >
+        <button on:click={() => selectTab(idx)} class="shrink truncate ml-4">
+          {tab.title}
+        </button>
+        <button
+          use:gtooltip={"close tab"}
+          on:click={() => closeTab(idx)}
+          class="ml-1 mr-1 invisible group-hover:visible text-gray-400 hover:text-red-400"
+        >
+          *
+        </button>
+      </div>
+    {/each}
     <button
       use:gtooltip={"create new note"}
       on:click={() => createNewNote("")}
@@ -378,7 +406,7 @@
     <button
       use:gtooltip={newNoteShortcut}
       on:click={() => createNewNote("")}
-      class="relative text-sm border ml-2 border-gray-300 hover:bg-gray-100 rounded-md py-0.5 px-2"
+      class="relative text-sm border ml-2 border-gray-300 hover:bg-gray-100 rounded-md py-0.5 px-2 whitespace-nowrap"
       >new note</button
     >
 
@@ -461,6 +489,10 @@
       Noto Color Emoji;
   }
 
+  .active-tab {
+    @apply border-t border-l border-r border-gray-400 mr-[2px];
+  }
+
   .flash-msg {
     top: 52px;
     right: 8px;
@@ -483,17 +515,5 @@
 
   .codemirror-wrapper :global(.cm-focused) {
     outline: none;
-  } */
-
-  .user-modify-plain {
-    -webkit-user-modify: read-write-plaintext-only;
-  }
-  .note-title[placeholder]:empty::before {
-    content: attr(placeholder);
-    @apply text-gray-400 italic font-normal;
-  }
-
-  /* .note-title[placeholder]:empty:focus::before {
-    content: "";
   } */
 </style>
