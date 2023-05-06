@@ -260,12 +260,12 @@
     ti.title = getNoteTitle(note);
     ti.isCurrent = true;
     let newTabs = [ti];
-    newTabs.push(new TabInfo("another tab"));
-    newTabs.push(new TabInfo("another tab"));
-    newTabs.push(new TabInfo("another tab"));
-    newTabs.push(new TabInfo("another tab"));
-    newTabs.push(new TabInfo("another tab"));
-    newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
+    // newTabs.push(new TabInfo("another tab"));
 
     const stateRestored = await editor.loadPage(note);
     if (pos) {
