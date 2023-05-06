@@ -46,7 +46,6 @@ import {
   xmlLanguage,
   yamlLanguage,
 } from "./deps.js";
-import { PathPageNavigator, encodeNoteURL } from "./navigator.js";
 import {
   addNoteVersion,
   getLastModifiedNote,
@@ -69,6 +68,7 @@ import {
 } from "./cm_plugins/editor_paste.js";
 import { clickNavigate, linkNavigate } from "./plugs/core/navigate.js";
 import { deletePage, pageComplete } from "./plugs/core/page.js";
+import { encodeNoteURL, navigate, setPageLoadCallback } from "./navigator.js";
 import { len, throttle, throwIf } from "./lib/util.js";
 
 import { CodeWidgetHook } from "./hooks/code_widget.js";
@@ -433,7 +433,6 @@ export class Editor {
     }
 
     this.indexNote = indexNote;
-    this.pageNavigator = new PathPageNavigator(this.indexNote);
 
     // TODO: long term we want to undo this redirection
     setEditor(this);
@@ -499,7 +498,7 @@ export class Editor {
       return;
     }
 
-    await this.pageNavigator.navigate(note, pos, replaceState);
+    await navigate(note, pos, replaceState);
   }
 
   /**
@@ -582,8 +581,8 @@ export class Editor {
 
   async init() {
     log("Editor.init");
-    // called by pageNavigator
-    this.pageNavigator.subscribe(async (note, pos) => {
+
+    setPageLoadCallback(async (note, pos) => {
       log("Editor: Now navigating to", note);
       if (!this.editorView) {
         return;

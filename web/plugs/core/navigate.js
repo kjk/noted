@@ -1,15 +1,13 @@
 import {
-  addParentPointers,
+  editor,
+  space,
+  system,
+} from "../../plug-api/silverbullet-syscall/mod.js";
+import {
   findNodeOfType,
   findParentMatching,
   nodeAtPos,
 } from "../../plug-api/lib/tree.js";
-import {
-  editor,
-  markdown,
-  space,
-  system,
-} from "../../plug-api/silverbullet-syscall/mod.js";
 
 import { log } from "../../lib/log.js";
 
@@ -103,7 +101,7 @@ export async function linkNavigate() {
   let pos = await editor.getCursor();
   const newNode = nodeAtPos(mdTree, pos);
   if (!newNode) {
-    log("clickNavigate: no node at pos", event.pos);
+    log("clickNavigate: no node at pos", pos);
     return;
   }
   await actionClickOrActionEnter(newNode);

@@ -14,7 +14,6 @@ const idSep = "~";
 /** @typedef {import("./notesStore").Note} Note */
 
 /**
- *
  * @param {Note} note
  * @returns {string}
  */
@@ -44,72 +43,66 @@ function decodePageURL() {
   }
 }
 
-export class PathPageNavigator {
-  /** @type {Note} */
-  indexPage;
+let navigationResolve = null;
 
-  /**
-   * @param {Note} indexPage
-   */
-  constructor(indexPage) {
-    this.indexPage = indexPage;
+/**
+ * @param {Note} note
+ * @param {number|string} pos
+ * @param {boolean} replaceState
+ */
+export async function navigate(note, pos, replaceState = false) {
+  let uri = "";
+  if (note !== null) {
+    uri = "/n/" + encodeNoteURL(note);
   }
-
-  /**
-   * @param {Note} note
-   * @param {number|string} pos
-   * @param {boolean} replaceState
-   */
-  async navigate(note, pos, replaceState = false) {
-    let uri = "";
-    if (note !== null && note !== this.indexPage) {
-      uri = "/n/" + encodeNoteURL(note);
-    }
-    let noteID = getNoteID(note);
-    if (replaceState) {
-      window.history.replaceState({ noteID, pos }, "", uri);
-    } else {
-      window.history.pushState({ noteID, pos }, "", uri);
-    }
-    globalThis.dispatchEvent(
-      new PopStateEvent("popstate", {
-        state: { noteID, pos },
-      })
-    );
-    await new Promise((resolve) => {
-      this.navigationResolve = resolve;
-    });
-    this.navigationResolve = null;
+  let noteID = getNoteID(note);
+  if (replaceState) {
+    window.history.replaceState({ noteID, pos }, "", uri);
+  } else {
+    window.history.pushState({ noteID, pos }, "", uri);
   }
+  globalThis.dispatchEvent(
+    new PopStateEvent("popstate", {
+      state: { noteID, pos },
+    })
+  );
+  await new Promise((resolve) => {
+    navigationResolve = resolve;
+  });
+  navigationResolve = null;
+}
 
-  subscribe(pageLoadCallback) {
-    log("PathPageNavigator.subscribe");
-    const cb = (event) => {
-      log("PathPageNavigator.subscribe.cb: event", event);
-      let note = null;
-      /** @type {string|number} */
-      let pos = 0;
-      if (event?.state?.noteID) {
-        note = getNoteByID(event.state.noteID);
-        pos = event.state.pos;
-      }
-      if (!note) {
-        let [title, pagePos] = decodePageURL();
-        log(
-          `PathPageNavigator.subscribe.cb: title: '${title}', pagePos: ${pagePos}`
-        );
-        note = getNoteByEncodedTitle(title);
-        pos = pagePos;
-      }
-      log("PathPageNavigator.subscribe.cb: note", note, "pos", pos);
-      safeRun(async () => {
-        await pageLoadCallback(note, pos);
-        if (this.navigationResolve) {
-          this.navigationResolve();
-        }
-      });
-    };
-    globalThis.addEventListener("popstate", cb);
-    cb();
+let pageLoadCallback = null;
+
+function onPopState(event) {
+  log("onPopState: event", event);
+  let note = null;
+  /** @type {string|number} */
+  let pos = 0;
+  if (event?.state?.noteID) {
+    note = getNoteByID(event.state.noteID);
+    pos = event.state.pos;
+  }
+  if (!note) {
+    let [title, pagePos] = decodePageURL();
+    log(`onPopState: title: '${title}', pagePos: ${pagePos}`);
+    note = getNoteByEncodedTitle(title);
+    pos = pagePos;
+  }
+  log("onPopState: note", note, "pos", pos);
+  safeRun(async () => {
+    await pageLoadCallback(note, pos);
+    if (navigationResolve) {
+      navigationResolve();
+    }
+  });
+}
+
+export function setPageLoadCallback(cb) {
+  pageLoadCallback = cb;
+  if (pageLoadCallback) {
+    onPopState();
   }
 }
+
+globalThis.addEventListener("popstate", onPopState);
