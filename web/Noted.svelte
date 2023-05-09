@@ -28,6 +28,7 @@
   import { setEditor } from "./plug-api/silverbullet-syscall/mod";
   import { log } from "./lib/log";
   import { setNavigationCallback } from "./navigator";
+  import RenameNote from "./RenameNote.svelte";
 
   class TabInfo {
     /** @type {Note} */
@@ -45,7 +46,7 @@
 
   let commandPaletteNotes = [];
   let commandPalettePageNames = [];
-  let commandPaletteCommands = ["Delete Note"];
+  let commandPaletteCommands = ["Delete Note", "Rename Note"];
   let commadnPaletteSearchTerm = "";
   let showingCommandPalette = false;
   let onCommandPaletteSelected = (kind, idx, item) => {
@@ -68,6 +69,14 @@
   /** @type {Editor} */
   let editor;
   let errorMsg = "";
+
+  let showingRename = false;
+  let renameTitle = "";
+
+  function onNoteRename(newTitle) {
+    log("onNoteRename:", newTitle);
+    showingRename = false;
+  }
 
   async function titleChanged(title) {
     if (!title || !editor) {
@@ -121,6 +130,11 @@
       log("command:", item);
       if (item === "Delete Note") {
         await deleteCurrentNote();
+      } else if (item === "Rename Note") {
+        renameTitle = getNoteTitle(editor.currentNote);
+        showingRename = true;
+      } else {
+        throwIf(true, `unknown command: ${item}`);
       }
     } else {
       throwIf(true, `unknown kind: ${kind}`);
@@ -209,6 +223,9 @@
 
   async function createNewNote(title = "") {
     log("createNewNote");
+    if (title === "") {
+      title = "Untitled";
+    }
     let n = await newNote(title);
     await editor.navigate(n);
     let notes = await getNotes();
@@ -478,6 +495,14 @@
     startSearchTem={commadnPaletteSearchTerm}
     bind:open={showingCommandPalette}
     allowCreateOnEnter={true}
+  />
+{/if}
+
+{#if showingRename}
+  <RenameNote
+    bind:open={showingRename}
+    title={renameTitle}
+    onRenamed={onNoteRename}
   />
 {/if}
 
