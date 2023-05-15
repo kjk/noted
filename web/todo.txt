@@ -1,6 +1,7 @@
  tabs
 --- tabs
 
+- don't show close tab if only one tab shown
 - when creating a new note must ask for title first
 - implement renaming a note
 - implement opening a new tab: if Ctrl is pressed when ntoe is selected, the note is opened in a new tab at the end

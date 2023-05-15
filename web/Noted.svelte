@@ -15,6 +15,7 @@
     getNoteLastModified,
     deleteRemoteStoreCache,
     getNotesSync,
+    getLastModifiedNote,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -73,6 +74,15 @@
 
   let showingRename = false;
   let renameTitle = "";
+
+  $: showingRanameToggle(showingRename);
+
+  function showingRanameToggle(showing) {
+    if (editor && !showing) {
+      log("showingRanameToggle: false");
+      editor.focus();
+    }
+  }
 
   function onNoteRename(newTitle) {
     log("onNoteRename:", newTitle);
@@ -274,7 +284,7 @@
     let pos = first[1];
     if (note === null) {
       // TODO: handle no notes
-      note = getNotesSync()[0];
+      note = getLastModifiedNote();
       pos = 0;
     }
     let ti = new TabInfo();
@@ -327,8 +337,18 @@
     tabs = tabs;
   }
 
+  function renameTab(idx) {
+    let note = tabs[idx].note;
+    throwIf(note !== editor.currentNote);
+    renameTitle = getNoteTitle(note);
+    showingRename = true;
+  }
+
   function closeTab(idx) {
-    let deletedTabs = tabs.splice(idx, 1);
+    if (len(tabs) < 2) {
+      return;
+    }
+    tabs.splice(idx, 1);
     tabs = tabs;
     // if removed current tab, set another tab as current
     for (let tab of tabs) {
@@ -390,18 +410,24 @@
     {#each tabs as tab, idx}
       {@const isActive = tab.isCurrent}
       {@const cls = isActive ? "active-tab" : ""}
+      {@const showClose = len(tabs) > 1}
+      {@const cls2 = showClose ? "close-shown" : ""}
       {@const tt = tab.title}
       <div
         use:gtooltip={tt}
-        class="flex shrink min-w-0 group note-title ml-[-0.125rem] user-modify-plain text-lg font-semibold bg-white hover:bg-gray-50 hover:cursor-pointer {cls}"
+        class="flex items-baseline shrink min-w-0 group ml-[-0.125rem] font-semibold bg-white hover:bg-gray-50 hover:cursor-pointer {cls}"
       >
-        <button on:click={() => selectTab(idx)} class="shrink truncate ml-4">
+        <button
+          on:click={() => selectTab(idx)}
+          on:dblclick={() => renameTab(idx)}
+          class="shrink truncate ml-4"
+        >
           {tab.title}
         </button>
         <button
           use:gtooltip={"close tab"}
           on:click={() => closeTab(idx)}
-          class="ml-1 mr-1 invisible group-hover:visible text-gray-400 hover:text-red-400"
+          class="ml-1 mr-1 invisible group-hover:visible text-white {cls2}"
         >
           *
         </button>
@@ -521,6 +547,10 @@
 
   .active-tab {
     @apply border-t border-l border-r border-gray-400 mr-[2px];
+  }
+
+  .close-shown:hover {
+    @apply text-red-400;
   }
 
   .flash-msg {
