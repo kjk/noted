@@ -16,6 +16,7 @@
     deleteRemoteStoreCache,
     getNotesSync,
     getLastModifiedNote,
+    getNoteID,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -84,25 +85,35 @@
     }
   }
 
-  function onNoteRename(newTitle) {
-    log("onNoteRename:", newTitle);
+  async function onNoteRename(newTitle) {
+    log(`onNoteRename: new: ${newTitle}, old: ${renameTitle}`);
     showingRename = false;
-  }
-
-  async function titleChanged(title) {
-    if (!title || !editor) {
+    if (newTitle === renameTitle) {
       return;
     }
     let note = editor.currentNote;
     if (!note) {
       return;
     }
-    let prevTitle = getNoteTitle(note);
-    if (prevTitle === title) {
-      return;
+
+    log(`titleChanged: '${renameTitle}' => '${newTitle}'`);
+    // TODO: move this end to make perceived speed faster?
+    await setNoteTitle(note, newTitle);
+
+    log("titleChanged: done");
+    // TODO: a better way to update tab title? Maybe remember the tab being modified?
+    let noteID = getNoteID(note);
+    for (let tab of tabs) {
+      if (!tab.note) {
+        continue;
+      }
+      let tabNoteID = getNoteID(tab.note);
+      if (tabNoteID === noteID) {
+        tab.title = newTitle;
+        break;
+      }
     }
-    log(`titleChanged: '${prevTitle}' => '${title}'`);
-    setNoteTitle(note, title);
+    tabs = tabs;
   }
 
   let flashMsg = "";
@@ -330,6 +341,9 @@
   }
 
   function selectTab(idx) {
+    if (tabs[idx].isCurrent) {
+      return;
+    }
     for (let tab of tabs) {
       tab.isCurrent = false;
     }
@@ -338,6 +352,7 @@
   }
 
   function renameTab(idx) {
+    log("renameTab:", idx);
     let note = tabs[idx].note;
     throwIf(note !== editor.currentNote);
     renameTitle = getNoteTitle(note);

@@ -17,6 +17,11 @@
     log("rename");
     onRenamed(newTitle);
   }
+  function onKeyDown(ev) {
+    if (ev.key === "Enter") {
+      onRenamed(newTitle);
+    }
+  }
 </script>
 
 <Overlay bind:open>
@@ -27,6 +32,7 @@
       class="mt-2 border w-[40ch] px-2 py-1"
       type="text"
       bind:value={newTitle}
+      on:keydown={onKeyDown}
     />
     <div class="flex gap-x-2 mt-2">
       <div class="grow" />

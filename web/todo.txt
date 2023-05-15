@@ -1,17 +1,16 @@
- tabs
 --- tabs
-
-- don't show close tab if only one tab shown
 - when creating a new note must ask for title first
-- implement renaming a note
 - implement opening a new tab: if Ctrl is pressed when ntoe is selected, the note is opened in a new tab at the end
-- don't allow closing the only tab
 - fix closing a tab
 - fix setting a state
 - indicate currently selected tab in the url (e.g. by appeding ;2 at the end, which indicates that tab 2 is selected)
 
+--- misc
 - call deleteRemoteStoreCache() when logging out. used to be in useRemoteStore() but that's called on startup which was killing the cache
 
 Done:
+- [X] implement renaming a note
+- [X] don't allow closing the only tab
+- [X] don't show close tab if only one tab shown
 - [x] move setNavigationCallback() to Noted.svelte
 - [x] move Editor.navigate() to Noted.svelte and make it handle tabs. if navigating to a tab that is already opened, simply switches to that tab. If navigates to new note, replace current tab with that note. Maybe add a flag "newTab" which will open a new tab instead of replacing content
