@@ -44,6 +44,9 @@ function sanitizePos(pos) {
 function decodePageURL() {
   let path = location.pathname;
   log("decodePageURL: path", path);
+  if (!path.startsWith("/n/")) {
+    return [[null, 0]];
+  }
   path = path.substring(3); // trim /n/ at the beginning
   let noteURL = globalThis.decodeURIComponent(path);
   let res = [];

@@ -14,6 +14,7 @@
     deleteNote,
     getNoteLastModified,
     deleteRemoteStoreCache,
+    getNotesSync,
   } from "./notesStore";
   import { Editor } from "./editor";
   import GlobalTooltip, { gtooltip } from "./lib/GlobalTooltip.svelte";
@@ -272,6 +273,11 @@
     let first = notes[0];
     let note = first[0];
     let pos = first[1];
+    if (note === null) {
+      // TODO: handle no notes
+      note = getNotesSync()[0];
+      pos = 0;
+    }
     let ti = new TabInfo();
     ti.note = note;
     ti.title = getNoteTitle(note);
