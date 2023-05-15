@@ -420,7 +420,7 @@
 
 <div id="sb-root" class="g grid grid-rows-[auto_1fr_auto] h-screen px-4 py-2">
   <div
-    class="mx-[22px] flex items-center overflow-auto max-w-[var(--editor-width)] px-[20px]"
+    class="mx-[22px] flex items-center max-w-[var(--editor-width)] px-[20px]"
   >
     {#each tabs as tab, idx}
       {@const isActive = tab.isCurrent}
