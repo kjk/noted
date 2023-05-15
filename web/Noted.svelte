@@ -257,7 +257,6 @@
 
   async function useRemoteStore() {
     changeToRemoteStore();
-    deleteRemoteStoreCache();
   }
 
   function flashNotification(msg, type) {

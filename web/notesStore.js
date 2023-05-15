@@ -568,6 +568,7 @@ export class StoreRemote extends StoreCommon {
     );
     for (let id of toDelete) {
       await this.kvContentCache.del(id);
+      log(`updateContentCache: deleted blob ${id}`);
     }
     let blobPromises = [];
     for (let id of missing) {
@@ -579,6 +580,7 @@ export class StoreRemote extends StoreCommon {
       let blob = await blobPromises[i];
       let id = missing[i];
       await this.kvContentCache.set(id, blob);
+      log(`updateContentCache: cached blob ${id} ${blob.size} bytes`);
     }
     log(`updateContentCache: took ${elapsed()} ms`);
   }
