@@ -8,8 +8,10 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/kjk/common v0.0.0-20230928012943-ce3f5e0732d7
 	github.com/kjk/minioutil v0.0.0-20230422073834-96945ac7e481
+	github.com/melbahja/goph v1.4.0
 	github.com/minio/minio-go/v7 v7.0.63
 	github.com/pirsch-analytics/pirsch-go-sdk v1.9.0
+	github.com/pkg/sftp v1.13.6
 	github.com/sanity-io/litter v1.5.5
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 )
@@ -23,12 +25,14 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.27.6 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

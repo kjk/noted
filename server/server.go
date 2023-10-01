@@ -34,7 +34,6 @@ var (
 	cookieAuthKeyHexStr = "81615f1aed7f857b4cb9c539acb5f9b5a88c9d6c4e87a4141079490773d17f5b"
 	cookieEncrKeyHexStr = "00db6337a267be94a44813335bf3bd9e35868875b896fbe3758e613fbb8ec8d4"
 
-	httpPort    = 9236
 	proxyURLStr = "http://localhost:3047"
 	// maps ouath secret to login info
 	loginsInProress = map[string]string{}

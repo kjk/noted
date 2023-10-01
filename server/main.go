@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/kjk/common/u"
@@ -17,9 +16,24 @@ var (
 	secretGitHub = ""
 )
 
-func getSecretsFromEnv() {
+// in production deployment secrets are stored in binary as secretsEnv
+// when running non-prod we read secrets from secrets repo we assume
+// is parallel to this repo
+func loadSecrets() {
+	var m map[string]string
+	if len(secretsEnv) > 0 {
+		logf(ctx(), "loading secrets from secretsEnv\n")
+		m = parseEnv(secretsEnv)
+	} else {
+		panicIf(!isWinOrMac(), "secretsEnv is empty and running on linux")
+		d, err := os.ReadFile(secretsSrcPath)
+		must(err)
+		m = parseEnv(d)
+	}
+	validateSecrets(m)
+
 	getEnv := func(key string, val *string, minLen int) {
-		v := strings.TrimSpace(os.Getenv(key))
+		v := strings.TrimSpace(m[key])
 		if len(v) < minLen {
 			logf(ctx(), "Missing %s\n", key)
 			return
@@ -29,21 +43,22 @@ func getSecretsFromEnv() {
 		logf(ctx(), "Got %s\n", key)
 	}
 
-	getEnv("NOTED_AXIOM_TOKEN", &axiomApiToken, 40)
-	getEnv("NOTED_PIRSCH_SECRET", &pirschClientSecret, 64)
-	getEnv("NOTED_GITHUB_SECRET", &secretGitHub, 40)
-	getEnv("NOTED_UPSTASH_URL", &upstashDbURL, 20)
-	getEnv("NOTED_R2_ACCESS", &r2Access, 10)
-	getEnv("NOTED_R2_SECRET", &r2Secret, 10)
+	getEnv("AXIOM_TOKEN", &axiomApiToken, 40)
+	getEnv("PIRSCH_SECRET", &pirschClientSecret, 64)
+	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
+	getEnv("UPSTASH_URL", &upstashDbURL, 20)
+	getEnv("R2_ACCESS", &r2Access, 10)
+	getEnv("R2_SECRET", &r2Secret, 10)
 
-	// validate the
 	if upstashDbURL != "" {
 		_, err := redis.ParseURL(upstashDbURL)
 		must(err)
 	}
 	if isDev() {
+		getEnv("GITHUB_SECRET_LOCAL", &secretGitHub, 40)
 		upstashPrefix = "dev:"
 		r2KeyPrefix = "dev/"
+		pirschClientSecret = ""
 	}
 }
 
@@ -59,18 +74,20 @@ func isDev() bool {
 func main() {
 	var (
 		flgRunProd         bool
-		flgDeploy          bool
-		flgBuild           bool
-		flgCi              bool
 		flgWc              bool
 		flgVisualizeBundle bool
+		flgDeployHetzner   bool
+		flgSetupAndRun     bool
+		flgBuildLocalProd  bool
+		flgExtractFrontend bool
 	)
 	{
 		flag.BoolVar(&flgRunDev, "run-dev", false, "run the server in dev mode")
 		flag.BoolVar(&flgRunProd, "run-prod", false, "run server in production")
-		flag.BoolVar(&flgDeploy, "deploy", false, "start deploy on render.com")
-		flag.BoolVar(&flgBuild, "build", false, "run yarn build to build frontend")
-		flag.BoolVar(&flgCi, "ci", false, "true if needs to tell we're running under ci (github actions)")
+		flag.BoolVar(&flgDeployHetzner, "deploy-hetzner", false, "deploy to hetzner")
+		flag.BoolVar(&flgBuildLocalProd, "build-local-prod", false, "build for production run locally")
+		flag.BoolVar(&flgSetupAndRun, "setup-and-run", false, "setup and run on the server")
+		flag.BoolVar(&flgExtractFrontend, "extract-frontend", false, "extract frontend files embedded as zip in the binary")
 		flag.BoolVar(&flgWc, "wc", false, "count lines")
 		flag.BoolVar(&flgNoBrowserOpen, "no-open", false, "don't open browser when running dev server")
 		flag.BoolVar(&flgVisualizeBundle, "visualize-bundle", false, "visualize bundle")
@@ -78,13 +95,11 @@ func main() {
 	}
 
 	if flgVisualizeBundle {
-		cmd := exec.Command("npx", "vite-bundle-visualizer")
-		cmdLog(cmd)
-		must(cmd.Run())
+		runLoggedInDir("frontend", "npx", "vite-bundle-visualizer")
 		return
 	}
 
-	getSecretsFromEnv()
+	loadSecrets()
 
 	if false {
 		v := []interface{}{"s", 5, "hala"}
@@ -98,22 +113,6 @@ func main() {
 		testUpstash()
 	}
 
-	if flgWc {
-		doLineCount()
-		return
-	}
-
-	if flgBuild {
-		build()
-		buildDocs()
-		return
-	}
-
-	if flgDeploy {
-		deploy()
-		return
-	}
-
 	if flgRunDev {
 		build()
 		runServerDev()
@@ -122,6 +121,36 @@ func main() {
 
 	if flgRunProd {
 		runServerProd()
+		return
+	}
+
+	timeStart := time.Now()
+	defer func() {
+		logf(ctx(), "took: %s\n", time.Since(timeStart))
+	}()
+
+	if flgExtractFrontend {
+		extractFrontend()
+		return
+	}
+
+	if flgBuildLocalProd {
+		buildLocalProd()
+		return
+	}
+
+	if flgDeployHetzner {
+		deployToHetzner()
+		return
+	}
+
+	if flgSetupAndRun {
+		setupAndRun()
+		return
+	}
+
+	if flgWc {
+		doLineCount()
 		return
 	}
 
@@ -147,20 +176,6 @@ func cmdRunLoggedMust(cmd *exec.Cmd) {
 	cmd.Stdin = os.Stdin
 	err := cmd.Run()
 	must(err)
-}
-
-func deploy() {
-	uri := os.Getenv("NOTED_DEPLOY_URL")
-	if uri == "" {
-		logf(ctx(), "deply: NOTED_DEPLOY_URL env varialbe note found\n")
-		return
-	}
-	rsp, err := http.DefaultClient.Get(uri)
-	must(err)
-	defer rsp.Body.Close()
-	d, err := io.ReadAll(rsp.Body)
-	must(err)
-	logf(ctx(), "%s\n", string(d))
 }
 
 func build() {
