@@ -5,26 +5,23 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: "./frontend/src",
+  root: "./src",
   build: {
     // emptyOutDir: true,
     sourcemap: true,
-    outDir: resolve("frontend", "dist"),
+    outDir: resolve("dist"),
     chunkSizeWarningLimit: 600000,
     rollupOptions: {
       input: {
-        main: resolve("frontend", "src", "index.html"),
-        not_found: resolve("frontend", "src", "404.html"),
-        // test: resolve("web", "test.html"),
+        main: resolve("src", "index.html"),
+        not_found: resolve("src", "404.html"),
+        // test: resolve("src", "test.html"),
       },
 
       output: {
         manualChunks: {
           // TODO: why this generates 2 chunks?
-          emoji: [
-            "frontend/src/plugs/emoji/emoji.js",
-            "frontend/src/plugs/emoji/emoji-opt.js",
-          ],
+          emoji: ["src/plugs/emoji/emoji.js", "src/plugs/emoji/emoji-opt.js"],
           cm: [
             "codemirror",
             "@codemirror/legacy-modes/mode/lua",

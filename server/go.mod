@@ -1,6 +1,6 @@
 module github.com/kjk/noted
 
-go 1.18
+go 1.20
 
 require (
 	github.com/felixge/httpsnoop v1.0.3

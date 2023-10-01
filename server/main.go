@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-redis/redis"
+	"github.com/kjk/common/u"
 )
 
 var (
@@ -114,6 +115,7 @@ func main() {
 	}
 
 	if flgRunDev {
+		build()
 		runServerDev()
 		return
 	}
@@ -128,6 +130,7 @@ func main() {
 
 func startVite() func() {
 	cmd := exec.Command("npx", "vite", "--strictPort=true", "--clearScreen=false")
+	cmd.Dir = "frontend"
 	logf(ctx(), "> %s\n", cmd)
 	// cmdLog(cmd)
 	err := cmd.Start()
@@ -161,9 +164,34 @@ func deploy() {
 }
 
 func build() {
-	cmd := exec.Command("yarn", "build", "--emptyOutDir")
-	cmdLog(cmd)
-	must(cmd.Run())
+	if u.IsMac() {
+		{
+			cmd := exec.Command("bun", "install")
+			cmd.Dir = "frontend"
+			cmdLog(cmd)
+			must(cmd.Run())
+		}
+		{
+			cmd := exec.Command("bun", "run", "build")
+			cmd.Dir = "frontend"
+			cmdLog(cmd)
+			must(cmd.Run())
+		}
+
+	} else {
+		{
+			cmd := exec.Command("yarn")
+			cmd.Dir = "frontend"
+			cmdLog(cmd)
+			must(cmd.Run())
+		}
+		{
+			cmd := exec.Command("yarn", "build", "--emptyOutDir")
+			cmd.Dir = "frontend"
+			cmdLog(cmd)
+			must(cmd.Run())
+		}
+	}
 }
 
 func buildDocs() {
