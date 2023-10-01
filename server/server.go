@@ -409,8 +409,9 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			}
 		}
 
+		fsys := os.DirFS(distDir)
 		opts := hutil.ServeFileOptions{
-			Dir:              distDir,
+			FS:               fsys,
 			SupportCleanURLS: true,
 			ForceCleanURLS:   true,
 			ServeCompressed:  false,
