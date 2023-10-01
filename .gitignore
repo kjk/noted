@@ -15,10 +15,10 @@
 # vendor/
 
 node_modules/
-web/dist/
 dist/
 package-lock.json
 yarn.lock
 
 .DS_Store
 yarn-error.log
+bun.lockb

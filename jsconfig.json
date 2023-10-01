@@ -8,7 +8,7 @@
      * a value or a type, so tell TypeScript to enforce using
      * `import type` instead of `import` for Types.
      */
-    "importsNotUsedAsValues": "error",
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
     /**
@@ -29,5 +29,5 @@
    * Use global.d.ts instead of compilerOptions.types
    * to avoid limiting type declarations.
    */
-  "include": ["web/**/*.d.ts", "web/**/*.js", "web/**/*.svelte"]
+  "include": ["./frontend/src/**/*.d.ts", "./frontend/src/**/*.js", "./frontend/src/**/*.svelte"]
 }
