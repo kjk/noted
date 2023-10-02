@@ -17,17 +17,17 @@ import (
 
 // variables to customize
 var (
-	exeBaseName    = "noted"
-	domain         = "notedapp.dev"
-	httpPort       = 9305
-	secretsSrcPath = filepath.Join("..", "secrets", "noted.env")
-	wantedSecrets  = []string{"UPSTASH_URL", "R2_ACCESS", "R2_SECRET", "GITHUB_SECRET_PROD", "GITHUB_SECRET_LOCAL"}
+	exeBaseName      = "noted"
+	domain           = "notedapp.dev"
+	httpPort         = 9305
+	wantedSecrets    = []string{"UPSTASH_URL", "R2_ACCESS", "R2_SECRET", "GITHUB_SECRET_PROD", "GITHUB_SECRET_LOCAL"}
+	frontEndBuildDir = filepath.Join("frontend", "dist")
 )
 
 // stuff that is derived from the above
 var (
-	frontEndBuildDir = filepath.Join("frontend", "dist")
-	frontendZipName  = filepath.Join("server", "frontend.zip")
+	secretsSrcPath  = filepath.Join("..", "secrets", exeBaseName+".env")
+	frontendZipName = filepath.Join("server", "frontend.zip")
 
 	tmuxSessionName             = exeBaseName
 	deployServerDir             = "/root/apps/" + exeBaseName
