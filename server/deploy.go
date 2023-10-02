@@ -157,11 +157,11 @@ func rebuildFrontend() {
 	must(os.RemoveAll(frontEndBuildDir))
 	logf(ctx(), "deleted frontend dist dir '%s'\n", frontEndBuildDir)
 	if u.IsMac() {
-		runLoggedInDirMust("frontend", "bun", "install")
-		runLoggedInDirMust("frontend", "bun", "run", "build")
+		u.RunLoggedInDirMust("frontend", "bun", "install")
+		u.RunLoggedInDirMust("frontend", "bun", "run", "build")
 	} else if u.IsWindows() {
-		runLoggedInDirMust("frontend", "yarn")
-		runLoggedInDirMust("frontend", "yarn", "build")
+		u.RunLoggedInDirMust("frontend", "yarn")
+		u.RunLoggedInDirMust("frontend", "yarn", "build")
 	}
 }
 

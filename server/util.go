@@ -22,30 +22,12 @@ var (
 	panicIf    = u.PanicIf
 	panicIfErr = u.PanicIfErr
 	isWinOrMac = u.IsWinOrMac
+	isLinux    = u.IsLinux
 	formatSize = u.FormatSize
 )
 
 func ctx() context.Context {
 	return context.Background()
-}
-
-func isLinux() bool {
-	return !u.IsWinOrMac()
-}
-
-func cmdLog(cmd *exec.Cmd) {
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-}
-
-func runLoggedInDirMust(dir string, exe string, args ...string) {
-	cmd := exec.Command(exe, args...)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	must(err)
 }
 
 func getCallstackFrames(skip int) []string {
@@ -67,17 +49,6 @@ func getCallstackFrames(skip int) []string {
 func getCallstack(skip int) string {
 	frames := getCallstackFrames(skip + 1)
 	return strings.Join(frames, "\n")
-}
-
-func addNl(s string) string {
-	n := len(s)
-	if n == 0 {
-		return s
-	}
-	if s[n-1] == '\n' {
-		return s
-	}
-	return s + "\n"
 }
 
 const (
@@ -102,7 +73,7 @@ func fmtSmart(format string, args ...interface{}) string {
 }
 
 func serveInternalError(w http.ResponseWriter, r *http.Request, format string, args ...interface{}) {
-	logErrorf(r.Context(), addNl(format), args...)
+	logErrorf(r.Context(), u.AppendNewline(&format), args...)
 	errMsg := fmtSmart(format, args...)
 	v := map[string]interface{}{
 		"URL":      r.URL.String(),

@@ -6,7 +6,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gorilla/securecookie v1.1.1
-	github.com/kjk/common v0.0.0-20231002211236-85108909d27a
+	github.com/kjk/common v0.0.0-20231002214336-9790127da65d
 	github.com/kjk/minioutil v0.0.0-20230422073834-96945ac7e481
 	github.com/melbahja/goph v1.4.0
 	github.com/minio/minio-go/v7 v7.0.63

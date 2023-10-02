@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -157,7 +156,5 @@ func main() {
 }
 
 func buildDocs() {
-	cmd := exec.Command("yarn", "docs:build")
-	cmdLog(cmd)
-	must(cmd.Run())
+	u.RunLoggedInDirMust("frontend", "yarn", "docs:build")
 }
