@@ -19,7 +19,7 @@ import (
 var (
 	exeBaseName    = "noted"
 	domain         = "notedapp.dev"
-	httpPort       = 9236
+	httpPort       = 9305
 	secretsSrcPath = filepath.Join("..", "secrets", "noted.env")
 	wantedSecrets  = []string{"UPSTASH_URL", "R2_ACCESS", "R2_SECRET", "GITHUB_SECRET_PROD", "GITHUB_SECRET_LOCAL"}
 )
@@ -227,18 +227,6 @@ func deleteOldBuilds() {
 	files, err := filepath.Glob(pattern)
 	must(err)
 	for _, path := range files {
-		isDir, err := u.PathIsDir(path)
-		must(err)
-		if isDir {
-			if strings.HasSuffix(path, "-frontend") {
-				err = os.RemoveAll(path)
-				must(err)
-				logf(ctx(), "removed directory %s\n", path)
-			} else {
-				logf(ctx(), "skipping removal of directory %s\n", path)
-			}
-			continue
-		}
 		err = os.Remove(path)
 		must(err)
 		logf(ctx(), "deleted %s\n", path)
@@ -274,14 +262,13 @@ func buildForProd(forLinux bool) string {
 	// re-build the frontend. remove build process artifacts
 	// to keep things clean
 	secretsPath := filepath.Join("server", "secrets.env")
-
 	os.Remove(secretsPath)
 	defer os.Remove(secretsPath)
 	os.Remove(frontendZipName)
 	defer os.Remove(frontendZipName)
 	os.RemoveAll(frontEndBuildDir)
 
-	// copy secrets from ../secrets/onlinetools.env to server/secrets.env
+	// copy secrets from ../secrets/${me}.env to server/secrets.env
 	// so that it's included in the binary as secretsEnv
 	{
 		d, err := os.ReadFile(secretsSrcPath)
@@ -490,7 +477,7 @@ func setupAndRun() {
 
 		// daemon-reload needed if service file changed
 		runLoggedMust("systemctl", "daemon-reload")
-		// runCmdLoggedMust("systemctl", "start", serviceName)
+		// runLoggedMust("systemctl", "start", serviceName)
 		runLoggedMust("systemctl", "enable", serviceName)
 
 		runLoggedMust(systemdRunScriptPath)
