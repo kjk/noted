@@ -23,12 +23,12 @@ func loadSecrets() {
 	var m map[string]string
 	if len(secretsEnv) > 0 {
 		logf(ctx(), "loading secrets from secretsEnv\n")
-		m = parseEnv(secretsEnv)
+		m = u.ParseEnvMust(secretsEnv)
 	} else {
 		panicIf(!isWinOrMac(), "secretsEnv is empty and running on linux")
 		d, err := os.ReadFile(secretsSrcPath)
 		must(err)
-		m = parseEnv(d)
+		m = u.ParseEnvMust(d)
 	}
 	validateSecrets(m)
 
@@ -95,7 +95,7 @@ func main() {
 	}
 
 	if flgVisualizeBundle {
-		runLoggedInDir("frontend", "npx", "vite-bundle-visualizer")
+		u.RunLoggedInDir("frontend", "npx", "vite-bundle-visualizer")
 		return
 	}
 
@@ -114,7 +114,6 @@ func main() {
 	}
 
 	if flgRunDev {
-		build()
 		runServerDev()
 		return
 	}
@@ -155,58 +154,6 @@ func main() {
 	}
 
 	flag.Usage()
-}
-
-func startVite() func() {
-	cmd := exec.Command("npx", "vite", "--strictPort=true", "--clearScreen=false")
-	cmd.Dir = "frontend"
-	logf(ctx(), "> %s\n", cmd)
-	// cmdLog(cmd)
-	err := cmd.Start()
-	must(err)
-	return func() {
-		cmd.Process.Kill()
-	}
-}
-
-func cmdRunLoggedMust(cmd *exec.Cmd) {
-	logf(ctx(), "> %s\n", cmd)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	err := cmd.Run()
-	must(err)
-}
-
-func build() {
-	if u.IsMac() {
-		{
-			cmd := exec.Command("bun", "install")
-			cmd.Dir = "frontend"
-			cmdLog(cmd)
-			must(cmd.Run())
-		}
-		{
-			cmd := exec.Command("bun", "run", "build")
-			cmd.Dir = "frontend"
-			cmdLog(cmd)
-			must(cmd.Run())
-		}
-
-	} else {
-		{
-			cmd := exec.Command("yarn")
-			cmd.Dir = "frontend"
-			cmdLog(cmd)
-			must(cmd.Run())
-		}
-		{
-			cmd := exec.Command("yarn", "build", "--emptyOutDir")
-			cmd.Dir = "frontend"
-			cmdLog(cmd)
-			must(cmd.Run())
-		}
-	}
 }
 
 func buildDocs() {

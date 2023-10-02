@@ -443,20 +443,6 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 	return httpSrv
 }
 
-func rebuildFrontend() {
-	// assuming this is not deployment: re-build the frontend
-	err := os.RemoveAll(frontEndBuildDir)
-	must(err)
-	logf(ctx(), "deleted dir '%s'\n", frontEndBuildDir)
-	if u.IsMac() {
-		runLoggedInDirMust("frontend", "bun", "install")
-		runLoggedInDirMust("frontend", "bun", "run", "build")
-	} else if u.IsWindows() {
-		runLoggedInDirMust("frontend", "yarn")
-		runLoggedInDirMust("frontend", "yarn", "build")
-	}
-}
-
 func runServerProd() {
 	var fsys fs.FS
 	fromZip := len(frontendZipData) > 0
@@ -485,6 +471,10 @@ func runServerProd() {
 
 func runServerDev() {
 	rebuildFrontend()
+
+	killYarn, err := startLoggedInDir("frontend", "yarn", "run", "dev")
+	must(err)
+	defer killYarn()
 
 	// must be same as vite.config.js
 	proxyURL, err := url.Parse(proxyURLStr)
