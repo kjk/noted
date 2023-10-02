@@ -89,17 +89,18 @@ func appendOrReplaceInText(orig string, toAppend string, delim string) string {
 	addNewline(&toAppend)
 	addNewline(&delim)
 	content := "\n\n" + delim + toAppend + delim
-	start := strings.Index(orig, delim)
 	if strings.Contains(orig, content) {
 		return collapseMultipleNewlines(orig)
 	}
-	if start >= 0 {
-		end := strings.Index(orig[start+1:], delim)
-		panicIf(end == -1, "didn't find end delim")
-		end += start + 1
-		orig = orig[:start] + "\n\n" + orig[end+len(delim):]
+	start := strings.Index(orig, delim)
+	if start < 0 {
+		return collapseMultipleNewlines(orig + content)
 	}
-	res := addNewline(&orig) + delim + toAppend + delim
+	end := strings.Index(orig[start+1:], delim)
+	panicIf(end == -1, "didn't find end delim")
+	end += start + 1
+	orig = orig[:start] + "\n\n" + orig[end+len(delim):]
+	res := addNewline(&orig) + content
 	return collapseMultipleNewlines(res)
 }
 
