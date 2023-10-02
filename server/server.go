@@ -6,13 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -307,32 +306,16 @@ func postWithHeaders(uri string, hdrs map[string]string) (*http.Response, error)
 	return resp, err
 }
 
-var (
-	data404 []byte
-)
-
-func read404(dir string) []byte {
-	if data404 != nil && !isDev() {
-		return data404
-	}
-	path := filepath.Join(dir, "404.html")
-	d, err := ioutil.ReadFile(path)
+func read404(fsys fs.FS) []byte {
+	d, err := u.FsReadFile(fsys, "404.html")
 	must(err)
-	data404 = d
 	return d
 }
 
 // in dev, proxyHandler redirects assets to vite web server
 // in prod, assets must be pre-built in web/dist directory
-func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
+func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Server {
 	makeSecureCookie()
-
-	distDir := ""
-
-	if proxyHandler == nil {
-		distDir = "dist"
-		panicIf(!u.DirExists(distDir), "dir '%s' doesn't exist", distDir)
-	}
 
 	wasBad := false
 	mainHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -408,7 +391,6 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 			}
 		}
 
-		fsys := os.DirFS(distDir)
 		opts := hutil.ServeFileOptions{
 			FS:               fsys,
 			SupportCleanURLS: true,
@@ -421,7 +403,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 
 		w.Header().Set("Content-Type", "text/html")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		d := read404(distDir)
+		d := read404(fsys)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write(d)
 	}
@@ -461,29 +443,62 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy) *http.Server {
 	return httpSrv
 }
 
+func rebuildFrontend() {
+	// assuming this is not deployment: re-build the frontend
+	err := os.RemoveAll(frontEndBuildDir)
+	must(err)
+	logf(ctx(), "deleted dir '%s'\n", frontEndBuildDir)
+	if u.IsMac() {
+		runLoggedInDirMust("frontend", "bun", "install")
+		runLoggedInDirMust("frontend", "bun", "run", "build")
+	} else if u.IsWindows() {
+		runLoggedInDirMust("frontend", "yarn")
+		runLoggedInDirMust("frontend", "yarn", "build")
+	}
+}
+
 func runServerProd() {
-	httpSrv := makeHTTPServer(nil)
+	var fsys fs.FS
+	fromZip := len(frontendZipData) > 0
+	if fromZip {
+		var err error
+		fsys, err = u.NewMemoryFSForZipData(frontendZipData)
+		must(err)
+		sizeStr := u.FormatSize(int64(len(frontendZipData)))
+		logf(ctx(), "runServerProd(): will serve files from embedded zip of size '%v'\n", sizeStr)
+	} else {
+		panicIf(isLinux(), "if running on Linux, must use frontendZipDataa")
+		rebuildFrontend()
+		panicIf(!u.DirExists(frontEndBuildDir), "dir '%s' doesn't exist", frontEndBuildDir)
+		fsys = os.DirFS(frontEndBuildDir)
+	}
+
+	httpSrv := makeHTTPServer(nil, fsys)
 	logf(ctx(), "runServerProd(): starting on 'http://%s', dev: %v\n", httpSrv.Addr, isDev())
-	err := httpSrv.ListenAndServe()
-	logf(ctx(), "httpSrv.ListenAndServe() exited with %v\n", err)
+	waitFn := serverListenAndWait(httpSrv)
+	if isWinOrMac() {
+		time.Sleep(time.Second * 2)
+		u.OpenBrowser("http://" + httpSrv.Addr)
+	}
+	waitFn()
 }
 
 func runServerDev() {
-	stopVite := startVite()
-	defer stopVite()
+	rebuildFrontend()
 
 	// must be same as vite.config.js
 	proxyURL, err := url.Parse(proxyURLStr)
 	must(err)
 	proxyHandler := httputil.NewSingleHostReverseProxy(proxyURL)
 
-	httpSrv := makeHTTPServer(proxyHandler)
+	fsys := os.DirFS(frontEndBuildDir)
+	httpSrv := makeHTTPServer(proxyHandler, fsys)
 
 	//closeHTTPLog := OpenHTTPLog("noted")
 	//defer closeHTTPLog()
 
 	logf(ctx(), "runServerDev(): starting on '%s', dev: %v\n", httpSrv.Addr, isDev())
-	if isDev() && !flgNoBrowserOpen {
+	if isWinOrMac() && !flgNoBrowserOpen {
 		time.Sleep(time.Second * 2)
 		u.OpenBrowser("http://" + httpSrv.Addr)
 	}
