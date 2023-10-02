@@ -488,11 +488,11 @@ func runServerDev() {
 	//defer closeHTTPLog()
 
 	logf(ctx(), "runServerDev(): starting on '%s', dev: %v\n", httpSrv.Addr, isDev())
+	waitFn := serverListenAndWait(httpSrv)
 	if isWinOrMac() && !flgNoBrowserOpen {
 		time.Sleep(time.Second * 2)
 		u.OpenBrowser("http://" + httpSrv.Addr)
 	}
-	waitFn := serverListenAndWait(httpSrv)
 	waitFn()
 }
 
