@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/kjk/common/u"
 )
 
@@ -43,15 +42,8 @@ func loadSecrets() {
 	}
 
 	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
-	getEnv("UPSTASH_URL", &upstashDbURL, 20)
-
-	if upstashDbURL != "" {
-		_, err := redis.ParseURL(upstashDbURL)
-		must(err)
-	}
 	if isDev() {
 		getEnv("GITHUB_SECRET_LOCAL", &secretGitHub, 40)
-		upstashPrefix = "dev:"
 	}
 }
 
@@ -124,10 +116,6 @@ func main() {
 		d, _ := json.Marshal(v)
 		logf(ctx(), "v: %s\n", string(d))
 		return
-	}
-
-	if false {
-		testUpstash()
 	}
 
 	if flgRunDev {

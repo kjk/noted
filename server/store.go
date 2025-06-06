@@ -7,13 +7,10 @@ import (
 	"math/rand"
 	"net/http"
 	"path/filepath"
-	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/kjk/common/appendstore"
 )
 
@@ -21,29 +18,14 @@ type UserInfo struct {
 	User  string
 	Email string
 	Store *appendstore.Store
+	mu    sync.Mutex // protects Store
 }
 
 var (
-	users         []*UserInfo
-	upstashDbURL  string
-	upstashPrefix = "" // dev: if isDev
+	users []*UserInfo
 
 	muStore sync.Mutex
 )
-
-func getUpstashClient() *redis.Client {
-	opt, _ := redis.ParseURL(upstashDbURL)
-	client := redis.NewClient(opt)
-	return client
-}
-
-func testUpstash() {
-	logf(ctx(), "testUpstash()\n")
-	c := getUpstashClient()
-	_, err := c.Ping().Result()
-	must(err)
-	logf(ctx(), "testUpstash() ok!\n")
-}
 
 func serveIfError(w http.ResponseWriter, err error) bool {
 	if err != nil {
@@ -59,90 +41,23 @@ func serveError(w http.ResponseWriter, s string, code int) {
 	http.Error(w, s, code)
 }
 
-func getLogKeyNo(s string) (int, error) {
-	idx := strings.LastIndex(s, "-")
-	if idx == -1 {
-		return 0, fmt.Errorf("getLogKeyNo() failed to parse '%s'", s)
-	}
-	return strconv.Atoi(s[idx+1:])
-}
-
-// keys are of the form "log-1", "log-2", etc.
-// TODO: verify they sort as we expect
-func sortLogKeys(a []string) error {
-	var err error
-	sort.Slice(a, func(i, j int) bool {
-		n1, err1 := getLogKeyNo(a[i])
-		if err1 != nil {
-			err = err1
-		}
-		n2, err1 := getLogKeyNo(a[j])
-		if err1 != nil {
-			err = err1
-		}
-
-		return n1 < n2
-	})
-	return err
-}
-
-const kMaxLogEntriesPerKey = 1024
-
-func mkLogKey(userID string, n int) string {
-	return fmt.Sprintf("%s%s:notes-log:log-%d", upstashPrefix, userID, n)
-}
-
-func mkLogKeyPrefix(userID string) string {
-	return fmt.Sprintf("%s%s:notes-log:log-*", upstashPrefix, userID)
-}
-
-func storeGetLogSortedKeys(userID string) ([]string, error) {
-	timeStart := time.Now()
-	prefix := mkLogKeyPrefix(userID)
-
-	c := getUpstashClient()
-	res := c.Keys(prefix)
-	if res.Err() != nil {
-		logf(ctx(), "storeGetLogKeys(): failed with '%s'\n", res.Err())
-		return nil, res.Err()
-	}
-	keys := res.Val()
-	err := sortLogKeys(keys)
-	logf(ctx(), "storeGetLog(): %d keys for prefix %s, keys: %v, took %s\n", len(keys), prefix, keys, time.Since(timeStart))
-	return keys, err
-}
-
-// TODO: prevent concurrent access to the same log key
-func storeAppendLog(userID string, v []interface{}) error {
+func storeAppendLog(userEmail string, v []interface{}) error {
 	logf(ctx(), "storeAppendLog()\n")
-	keys, err := storeGetLogSortedKeys(userID)
-	if err != nil {
-		return err
-	}
-	c := getUpstashClient()
-	key := mkLogKey(userID, 0)
-	if len(keys) > 0 {
-		key = keys[len(keys)-1]
-		res := c.LLen(key)
-		if res.Err() != nil {
-			return res.Err()
-		}
-		if res.Val() >= kMaxLogEntriesPerKey {
-			lastKeyNo, err := getLogKeyNo(key)
-			if err != nil {
-				return err
-			}
-			key = mkLogKey(userID, lastKeyNo+1)
-		}
-	}
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
 		logf(ctx(), "storeAppendLog(): failed to marshal '%#v', err: %s\n", v, err)
 		return err
 	}
-	logf(ctx(), " key: %s, v:'%s'\n", key, string(jsonStr))
-	res := c.RPush(key, jsonStr)
-	return res.Err()
+
+	u := findUserByEmail(userEmail)
+	if u == nil {
+		return fmt.Errorf("user not found for email %s", userEmail)
+	}
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	_, err = u.Store.AppendRecord("log", jsonStr, "")
+	return err
 }
 
 func storeGetLogs(userID string, start int) ([][]interface{}, error) {
@@ -154,53 +69,28 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	keys, err := storeGetLogSortedKeys(userID)
-	if err != nil {
-		return nil, err
+	u := findUserByEmail(userID)
+	if u == nil {
+		return nil, fmt.Errorf("user not found for email %s", userID)
 	}
-	c := getUpstashClient()
+	u.mu.Lock()
+	defer u.mu.Unlock()
 
 	logs := make([][]interface{}, 0)
-	if err != nil {
-		return nil, err
-	}
-	for _, key := range keys {
-		if start > 0 {
-			// TODO: do pipelining. ideally do lua script that returns
-			// keys and their lengths in one go, to reduce latency
-			timeStart := time.Now()
-			nValsRes := c.LLen(key)
-			logf(ctx(), "  LLen for '%s' took %s\n", key, time.Since(timeStart))
-			if nValsRes.Err() != nil {
-				return nil, nValsRes.Err()
-			}
-			nVals := int(nValsRes.Val())
-			logf(ctx(), "  key: %s, nVals: %d, start: %d\n", key, nVals, start)
-			if start >= nVals {
-				start -= nVals
-				continue
-			}
+	for _, rec := range u.Store.Records {
+		if rec.Kind != "log" {
+			continue
 		}
-
-		timeStart := time.Now()
-		res := c.LRange(key, 0, -1)
-		logf(ctx(), "  LRange for '%s' took %s\n", key, time.Since(timeStart))
-		if res.Err() != nil {
-			return nil, res.Err()
+		d, err := u.Store.ReadRecord(&rec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read record %s: %w", rec.Meta, err)
 		}
-		vals := res.Val()
-		for i, jsonStr := range vals {
-			if i < start {
-				continue
-			}
-			var v []interface{}
-			err := json.Unmarshal([]byte(jsonStr), &v)
-			if err != nil {
-				return nil, err
-			}
-			logs = append(logs, v)
+		var v []interface{}
+		err = json.Unmarshal(d, &v)
+		if err != nil {
+			return nil, err
 		}
-		start = 0
+		logs = append(logs, v)
 	}
 	logf(ctx(), "%d log entries for user %s\n", len(logs), userID)
 	return logs, nil
@@ -225,15 +115,14 @@ func contentPut(userEmail string, contentID string, r io.Reader) error {
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	getContent := func(u *UserInfo, i int) error {
-		if u == nil {
-			return fmt.Errorf("user not found for email %s", userEmail)
-		}
-		// TODO: have a mutex per user to make this faster
-		_, err := u.Store.AppendRecord("content", d, contentID)
-		return err
+
+	u := findUserByEmail(userEmail)
+	if u == nil {
+		return fmt.Errorf("user not found for email %s", userEmail)
 	}
-	err = findUserByEmailLocked(userEmail, getContent)
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	_, err = u.Store.AppendRecord("content", d, contentID)
 	return err
 }
 
@@ -242,23 +131,19 @@ func contentGet(userEmail string, contentID string) ([]byte, error) {
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	var content []byte
-	getContent := func(u *UserInfo, i int) error {
-		if u == nil {
-			return fmt.Errorf("user not found for email %s", userEmail)
-		}
-		// TODO: have a mutex per user to make this faster
-		for _, rec := range u.Store.Records {
-			if rec.Kind == "content" && rec.Meta == contentID {
-				var err error
-				content, err = u.Store.ReadRecord(&rec)
-				return err
-			}
-		}
-		return fmt.Errorf("content not found for user %s, contentID %s", userEmail, contentID)
+
+	u := findUserByEmail(userEmail)
+	if u == nil {
+		return nil, fmt.Errorf("user not found for email %s", userEmail)
 	}
-	err := findUserByEmailLocked(userEmail, getContent)
-	return content, err
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	for _, rec := range u.Store.Records {
+		if rec.Kind == "content" && rec.Meta == contentID {
+			return u.Store.ReadRecord(&rec)
+		}
+	}
+	return nil, fmt.Errorf("content not found for user %s, contentID %s", userEmail, contentID)
 }
 
 func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {

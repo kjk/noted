@@ -163,6 +163,7 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL, http.StatusFound) // 302
 }
 
+// use if fn() needs to modify users slice under lock
 func findUserByEmailLocked(email string, fn func(*UserInfo, int) error) error {
 	muStore.Lock()
 	defer muStore.Unlock()
@@ -175,9 +176,13 @@ func findUserByEmailLocked(email string, fn func(*UserInfo, int) error) error {
 	return fn(nil, -1)
 }
 
-func removeUserFn(u *UserInfo, i int) error {
-	if i >= 0 {
-		users = append(users[:i], users[i+1:]...)
+func findUserByEmail(email string) *UserInfo {
+	muStore.Lock()
+	defer muStore.Unlock()
+	for _, u := range users {
+		if u.Email == email {
+			return u
+		}
 	}
 	return nil
 }
@@ -194,6 +199,13 @@ func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	}
 	email := cookie.Email
 	deleteSecureCookie(w)
+
+	removeUserFn := func(u *UserInfo, i int) error {
+		if i >= 0 {
+			users = append(users[:i], users[i+1:]...)
+		}
+		return nil
+	}
 	findUserByEmailLocked(email, removeUserFn)
 	http.Redirect(w, r, "/", http.StatusFound) // 302
 }

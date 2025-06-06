@@ -20,7 +20,7 @@ var (
 	exeBaseName      = "noted"
 	domain           = "notedapp.dev"
 	httpPort         = 9305
-	wantedSecrets    = []string{"UPSTASH_URL", "GITHUB_SECRET_PROD", "GITHUB_SECRET_LOCAL"}
+	wantedSecrets    = []string{"GITHUB_SECRET_PROD", "GITHUB_SECRET_LOCAL"}
 	frontEndBuildDir = filepath.Join("frontend", "dist")
 )
 
