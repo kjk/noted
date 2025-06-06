@@ -77,8 +77,13 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 	defer u.mu.Unlock()
 
 	logs := make([][]interface{}, 0)
+	n := -1
 	for _, rec := range u.Store.Records {
 		if rec.Kind != "log" {
+			continue
+		}
+		n++
+		if n < start {
 			continue
 		}
 		d, err := u.Store.ReadRecord(&rec)
