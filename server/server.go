@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -320,11 +319,11 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	durMs := 0
+	//durMs := 0
 	meta := map[string]string{}
 	logKV := func(k, v string) {
 		if k == "dur" {
-			durMs, _ = strconv.Atoi(v)
+			//durMs, _ = strconv.Atoi(v)
 			return
 		}
 		if v != "" {
@@ -350,8 +349,8 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		v := vals.Get(k)
 		logKV(k, v)
 	}
-	axiomSendEvent(r, name, durMs, meta)
 
+	// TODO: send event
 	content := bytes.NewReader([]byte("ok"))
 	http.ServeContent(w, r, "foo.txt", time.Time{}, content)
 }
@@ -463,7 +462,6 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 				return
 			}
 			logHTTPReq(r, m.Code, m.Written, m.Duration)
-			axiomLogHTTPReq(ctx(), r, m.Code, int(m.Written), m.Duration)
 		}()
 	})
 

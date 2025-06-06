@@ -42,7 +42,6 @@ func loadSecrets() {
 		logf(ctx(), "Got %s\n", key)
 	}
 
-	getEnv("AXIOM_TOKEN", &axiomApiToken, 40)
 	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
 	getEnv("UPSTASH_URL", &upstashDbURL, 20)
 	getEnv("R2_ACCESS", &r2Access, 10)
