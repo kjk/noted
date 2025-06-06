@@ -19,16 +19,15 @@ import (
 )
 
 type UserInfo struct {
-	User       string
-	Email      string
-	lastLogKey string // log-0, log-1 etc.
+	User  string
+	Email string
 }
 
 var (
-	emailToUserInfo = map[string]*UserInfo{}
-	upstashDbURL    string
-	upstashPrefix   = "" // dev: if isDev
-	r2KeyPrefix     = "" // dev/ if isDev
+	users         []*UserInfo
+	upstashDbURL  string
+	upstashPrefix = "" // dev: if isDev
+	r2KeyPrefix   = "" // dev/ if isDev
 
 	r2Endpoint = "71694ef61795ecbe1bc331d217dbd7a7.r2.cloudflarestorage.com"
 	r2Bucket   = "noted"
@@ -285,17 +284,19 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 		return nil, fmt.Errorf("user not logged in (no cookie)")
 	}
 	email := cookie.Email
-	muStore.Lock()
-	defer muStore.Unlock()
-
-	userInfo, ok := emailToUserInfo[email]
-	if !ok {
-		userInfo = &UserInfo{
-			Email: cookie.Email,
-			User:  cookie.User,
+	var userInfo *UserInfo
+	getOrCreateUser := func(u *UserInfo, i int) {
+		if u == nil {
+			userInfo = &UserInfo{
+				Email: cookie.Email,
+				User:  cookie.User,
+			}
+			users = append(users, userInfo)
+		} else {
+			userInfo = u
 		}
-		emailToUserInfo[email] = userInfo
 	}
+	findUserByEmailLocked(email, getOrCreateUser)
 	return userInfo, nil
 }
 

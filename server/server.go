@@ -163,6 +163,26 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL, http.StatusFound) // 302
 }
 
+func findUserByEmailLocked(email string, fn func(*UserInfo, int)) {
+	muStore.Lock()
+	defer muStore.Unlock()
+
+	for i, u := range users {
+		if u.Email == email {
+			fn(u, i)
+			return
+		}
+	}
+	fn(nil, -1)
+}
+
+func removeUserFn(u *UserInfo, i int) {
+	if u == nil || i < 0 {
+		return
+	}
+	users = append(users[:i], users[i+1:]...)
+}
+
 // /auth/ghlogout
 func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -175,9 +195,7 @@ func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
 	}
 	email := cookie.Email
 	deleteSecureCookie(w)
-	muStore.Lock()
-	defer muStore.Unlock()
-	delete(emailToUserInfo, email)
+	findUserByEmailLocked(email, removeUserFn)
 	http.Redirect(w, r, "/", http.StatusFound) // 302
 }
 
@@ -338,10 +356,11 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// ignore but log
 			logErrorf(ctx(), "dec.Decode() failed with '%s'\n", err)
-		}
-		for k, v := range m {
-			vs := fmt.Sprintf("%s", v)
-			logKV(k, vs)
+		} else {
+			for k, v := range m {
+				vs := fmt.Sprintf("%s", v)
+				logKV(k, vs)
+			}
 		}
 	}
 	vals := r.Form
