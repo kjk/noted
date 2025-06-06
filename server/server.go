@@ -163,24 +163,23 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authURL, http.StatusFound) // 302
 }
 
-func findUserByEmailLocked(email string, fn func(*UserInfo, int)) {
+func findUserByEmailLocked(email string, fn func(*UserInfo, int) error) error {
 	muStore.Lock()
 	defer muStore.Unlock()
 
 	for i, u := range users {
 		if u.Email == email {
-			fn(u, i)
-			return
+			return fn(u, i)
 		}
 	}
-	fn(nil, -1)
+	return fn(nil, -1)
 }
 
-func removeUserFn(u *UserInfo, i int) {
-	if u == nil || i < 0 {
-		return
+func removeUserFn(u *UserInfo, i int) error {
+	if i >= 0 {
+		users = append(users[:i], users[i+1:]...)
 	}
-	users = append(users[:i], users[i+1:]...)
+	return nil
 }
 
 // /auth/ghlogout

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,25 +14,19 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/kjk/minioutil"
-	"github.com/minio/minio-go/v7"
+	"github.com/kjk/common/appendstore"
 )
 
 type UserInfo struct {
 	User  string
 	Email string
+	Store *appendstore.Store
 }
 
 var (
 	users         []*UserInfo
 	upstashDbURL  string
 	upstashPrefix = "" // dev: if isDev
-	r2KeyPrefix   = "" // dev/ if isDev
-
-	r2Endpoint = "71694ef61795ecbe1bc331d217dbd7a7.r2.cloudflarestorage.com"
-	r2Bucket   = "noted"
-	r2Access   string
-	r2Secret   string
 
 	muStore sync.Mutex
 )
@@ -49,30 +43,6 @@ func testUpstash() {
 	_, err := c.Ping().Result()
 	must(err)
 	logf(ctx(), "testUpstash() ok!\n")
-}
-
-func getR2Client() *minioutil.Client {
-	conf := &minioutil.Config{
-		Endpoint: r2Endpoint,
-		Bucket:   r2Bucket,
-		Access:   r2Access,
-		Secret:   r2Secret,
-	}
-	client, err := minioutil.New(conf)
-	must(err)
-	return client
-}
-
-func listR2Files() {
-	logf(ctx(), "listR2Files()\n")
-	mc := getR2Client()
-	nFiles := 0
-	files := mc.ListObjects("/")
-	for o := range files {
-		logf(ctx(), "%s\n", o.Key)
-		nFiles++
-	}
-	logf(ctx(), "nFiles: %d\n", nFiles)
 }
 
 func serveIfError(w http.ResponseWriter, err error) bool {
@@ -244,16 +214,10 @@ func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-func mkContentKey(userID string, contentID string) string {
-	return fmt.Sprintf("%scontent/%s/%s", r2KeyPrefix, userID, contentID)
-}
-
-func contentPut(userID string, contentID string, r io.Reader) error {
-	key := mkContentKey(userID, contentID)
-	logf(ctx(), "contentPut() id: %s, key: %s\n", contentID, key)
+func contentPut(userEmail string, contentID string, r io.Reader) error {
 	// Note: tried to PustObject(r) but the way minio client does multi-part
 	// uploads is not compatible with r2
-	d, err := ioutil.ReadAll(r)
+	d, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -261,21 +225,40 @@ func contentPut(userID string, contentID string, r io.Reader) error {
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	mc := getR2Client()
-	_, err = mc.UploadData(key, d, false)
+	getContent := func(u *UserInfo, i int) error {
+		if u == nil {
+			return fmt.Errorf("user not found for email %s", userEmail)
+		}
+		// TODO: have a mutex per user to make this faster
+		_, err := u.Store.AppendRecord("content", d, contentID)
+		return err
+	}
+	err = findUserByEmailLocked(userEmail, getContent)
 	return err
 }
 
-func contentGet(userID string, contentID string) (io.ReadCloser, error) {
-	key := mkContentKey(userID, contentID)
-	logf(ctx(), "contentGet(): id: %s, key: %s\n", contentID, key)
+func contentGet(userEmail string, contentID string) ([]byte, error) {
 	timeStart := time.Now()
 	defer func() {
 		logf(ctx(), "  took %s\n", time.Since(timeStart))
 	}()
-	mc := getR2Client()
-	obj, err := mc.Client.GetObject(ctx(), r2Bucket, key, minio.GetObjectOptions{})
-	return obj, err
+	var content []byte
+	getContent := func(u *UserInfo, i int) error {
+		if u == nil {
+			return fmt.Errorf("user not found for email %s", userEmail)
+		}
+		// TODO: have a mutex per user to make this faster
+		for _, rec := range u.Store.Records {
+			if rec.Kind == "content" && rec.Meta == contentID {
+				var err error
+				content, err = u.Store.ReadRecord(&rec)
+				return err
+			}
+		}
+		return fmt.Errorf("content not found for user %s, contentID %s", userEmail, contentID)
+	}
+	err := findUserByEmailLocked(userEmail, getContent)
+	return content, err
 }
 
 func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
@@ -285,16 +268,32 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 	}
 	email := cookie.Email
 	var userInfo *UserInfo
-	getOrCreateUser := func(u *UserInfo, i int) {
+	getOrCreateUser := func(u *UserInfo, i int) error {
 		if u == nil {
 			userInfo = &UserInfo{
 				Email: cookie.Email,
 				User:  cookie.User,
 			}
+
+			dataDir := getDataDirMust()
+			// TODO: must escape email to avoid chars not allowed in file names
+			dataDir = filepath.Join(dataDir, email)
+			userInfo.Store = &appendstore.Store{
+				DataDir:       dataDir,
+				IndexFileName: "index.txt",
+				DataFileName:  "data.bin",
+			}
+			err := appendstore.OpenStore(userInfo.Store)
+			if err != nil {
+				logf(ctx(), "getLoggedUser(): failed to open store for user %s, err: %s\n", email, err)
+				return err
+			}
 			users = append(users, userInfo)
-		} else {
-			userInfo = u
+			return nil
 		}
+
+		userInfo = u
+		return nil
 	}
 	findUserByEmailLocked(email, getOrCreateUser)
 	return userInfo, nil
@@ -307,8 +306,8 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		logf(ctx(), "handleStore: %s, err: %s\n", uri, err)
 		return
 	}
-	userID := userInfo.Email
-	logf(ctx(), "handleStore: %s, userID: %s\n", uri, userID)
+	userEmail := userInfo.Email
+	logf(ctx(), "handleStore: %s, userEmail: %s\n", uri, userEmail)
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
 		startStr := r.URL.Query().Get("start")
@@ -316,7 +315,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			start = 0
 		}
-		logs, err := storeGetLogs(userID, start)
+		logs, err := storeGetLogs(userEmail, start)
 		if serveIfError(w, err) {
 			return
 		}
@@ -335,7 +334,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if serveIfError(w, err) {
 			return
 		}
-		err = storeAppendLog(userID, logEntry)
+		err = storeAppendLog(userEmail, logEntry)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{
 				"ok": true,
@@ -351,12 +350,11 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 			serveError(w, "id is required", http.StatusBadRequest)
 			return
 		}
-		obj, err := contentGet(userID, id)
+		data, err := contentGet(userEmail, id)
 		if serveIfError(w, err) {
 			return
 		}
-		defer obj.Close()
-		io.Copy(w, obj)
+		w.Write(data)
 		return
 	}
 
@@ -369,7 +367,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if len(contentID) < 6 {
 			serveError(w, "id must be at least 6 chars", http.StatusBadRequest)
 		}
-		err = contentPut(userID, contentID, r.Body)
+		err = contentPut(userEmail, contentID, r.Body)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{}
 			serveJSONOK(w, r, res)

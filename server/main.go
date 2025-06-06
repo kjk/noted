@@ -44,8 +44,6 @@ func loadSecrets() {
 
 	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
 	getEnv("UPSTASH_URL", &upstashDbURL, 20)
-	getEnv("R2_ACCESS", &r2Access, 10)
-	getEnv("R2_SECRET", &r2Secret, 10)
 
 	if upstashDbURL != "" {
 		_, err := redis.ParseURL(upstashDbURL)
@@ -54,7 +52,6 @@ func loadSecrets() {
 	if isDev() {
 		getEnv("GITHUB_SECRET_LOCAL", &secretGitHub, 40)
 		upstashPrefix = "dev:"
-		r2KeyPrefix = "dev/"
 	}
 }
 
@@ -130,7 +127,6 @@ func main() {
 	}
 
 	if false {
-		listR2Files()
 		testUpstash()
 	}
 
