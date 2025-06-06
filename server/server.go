@@ -21,7 +21,6 @@ import (
 	hutil "github.com/kjk/common/httputil"
 	"github.com/sanity-io/litter"
 
-	"github.com/kjk/common/server"
 	"github.com/kjk/common/u"
 	"golang.org/x/exp/slices"
 )
@@ -307,7 +306,7 @@ func postWithHeaders(uri string, hdrs map[string]string) (*http.Response, error)
 }
 
 func read404(fsys fs.FS) []byte {
-	d, err := u.FsReadFile(fsys, "404.html")
+	d, err := fs.ReadFile(fsys, "404.html")
 	must(err)
 	return d
 }
@@ -325,8 +324,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 				http.Redirect(w, r, "/", http.StatusPermanentRedirect)
 				return true
 			}
-			wasBad = server.TryServeBadClient(w, r, nil)
-			return wasBad
+			return false
 		}
 		uri := r.URL.Path
 
@@ -397,7 +395,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 			ForceCleanURLS:   true,
 			ServeCompressed:  false,
 		}
-		if hutil.TryServeFile(w, r, &opts) {
+		if hutil.TryServeURLFromFS(w, r, &opts) {
 			return
 		}
 
