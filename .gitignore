@@ -23,3 +23,5 @@ yarn.lock
 yarn-error.log
 bun.lockb
 noted-2023-10-02-*
+
+data/

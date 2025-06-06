@@ -61,7 +61,22 @@ func loadSecrets() {
 var (
 	flgRunDev        bool
 	flgNoBrowserOpen bool
+	dataDir          string
 )
+
+func getDataDirMust() string {
+	if dataDir == "" {
+		onServer := "/home/data"
+		if u.DirExists(onServer) {
+			dataDir = onServer + "/noted"
+		} else {
+			dataDir = "data"
+		}
+		must(os.MkdirAll(dataDir, 0755))
+		logf(ctx(), "dataDir: %s\n", dataDir)
+	}
+	return dataDir
+}
 
 func isDev() bool {
 	return flgRunDev
