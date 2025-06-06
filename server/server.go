@@ -122,11 +122,6 @@ func logLogin(ctx context.Context, r *http.Request, user *GitHubUser) {
 	if user == nil || isDev() {
 		return
 	}
-	m := map[string]string{}
-	m["user"] = user.Login
-	m["email"] = user.Email
-	m["name"] = user.Name
-	pirschSendEvent(r, "github_login", 0, m)
 }
 
 func httpScheme(r *http.Request) string {
@@ -316,7 +311,6 @@ func read404(fsys fs.FS) []byte {
 func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Server {
 	makeSecureCookie()
 
-	wasBad := false
 	mainHandler := func(w http.ResponseWriter, r *http.Request) {
 
 		tryServeRedirect := func(uri string) bool {
@@ -407,7 +401,6 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 	}
 
 	handlerWithMetrics := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		wasBad = false
 		m := httpsnoop.CaptureMetrics(http.HandlerFunc(mainHandler), w, r)
 		defer func() {
 			if p := recover(); p != nil {
@@ -420,9 +413,6 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 				return
 			}
 			logHTTPReq(r, m.Code, m.Written, m.Duration)
-			if m.Code == 200 && !wasBad {
-				pirschSendHit(r)
-			}
 			axiomLogHTTPReq(ctx(), r, m.Code, int(m.Written), m.Duration)
 		}()
 	})

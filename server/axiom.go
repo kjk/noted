@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -25,7 +24,7 @@ var (
 
 // TODO: ip
 func axiomLogHTTPReq(ctx context.Context, r *http.Request, status int, size int, dur time.Duration) {
-	if axiomApiToken == "" || !strings.Contains(r.Host, pirschHost) {
+	if axiomApiToken == "" {
 		// don't log dev traffic (localhost etc.)
 		return
 	}
@@ -80,10 +79,6 @@ func axiomSendJSON2(d map[string]string) {
 
 func axiomSendEvent(r *http.Request, name string, durMs int, meta map[string]string) {
 	if axiomApiToken == "" || r == nil || r.URL == nil {
-		return
-	}
-	if !strings.Contains(r.Host, pirschHost) {
-		// don't log dev traffic (localhost etc.)
 		return
 	}
 	meta["type"] = "event"

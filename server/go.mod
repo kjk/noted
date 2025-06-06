@@ -12,7 +12,6 @@ require (
 	github.com/kjk/minioutil v0.0.0-20230422073834-96945ac7e481
 	github.com/melbahja/goph v1.4.0
 	github.com/minio/minio-go/v7 v7.0.92
-	github.com/pirsch-analytics/pirsch-go-sdk v1.9.0
 	github.com/pkg/sftp v1.13.9
 	github.com/sanity-io/litter v1.5.8
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
@@ -22,7 +21,6 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/emvi/null v1.3.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/google/uuid v1.6.0 // indirect

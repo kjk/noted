@@ -43,7 +43,6 @@ func loadSecrets() {
 	}
 
 	getEnv("AXIOM_TOKEN", &axiomApiToken, 40)
-	getEnv("PIRSCH_SECRET", &pirschClientSecret, 64)
 	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
 	getEnv("UPSTASH_URL", &upstashDbURL, 20)
 	getEnv("R2_ACCESS", &r2Access, 10)
@@ -57,7 +56,6 @@ func loadSecrets() {
 		getEnv("GITHUB_SECRET_LOCAL", &secretGitHub, 40)
 		upstashPrefix = "dev:"
 		r2KeyPrefix = "dev/"
-		pirschClientSecret = ""
 	}
 }
 
