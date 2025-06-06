@@ -168,3 +168,27 @@ func startLoggedInDir(dir string, exe string, args ...string) (func(), error) {
 		cmd.Process.Kill()
 	}, nil
 }
+
+func updateGoDeps(noProxy bool) {
+	{
+		cmd := exec.Command("go", "get", "-u", ".")
+		cmd.Dir = "server"
+		if noProxy {
+			cmd.Env = append(os.Environ(), "GOPROXY=direct")
+		}
+		logf(ctx(), "running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		panicIf(err != nil, "go get failed with '%s'", err)
+	}
+	{
+		cmd := exec.Command("go", "mod", "tidy")
+		cmd.Dir = "server"
+		logf(ctx(), "running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		panicIf(err != nil, "go get failed with '%s'", err)
+	}
+}

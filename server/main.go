@@ -70,6 +70,13 @@ func isDev() bool {
 	return flgRunDev
 }
 
+func measureDuration() func() {
+	timeStart := time.Now()
+	return func() {
+		logf(ctx(), "took %s\n", time.Since(timeStart))
+	}
+}
+
 func main() {
 	var (
 		flgRunProd         bool
@@ -79,6 +86,7 @@ func main() {
 		flgSetupAndRun     bool
 		flgBuildLocalProd  bool
 		flgExtractFrontend bool
+		flgUpdateGoDeps    bool
 	)
 	{
 		flag.BoolVar(&flgRunDev, "run-dev", false, "run the server in dev mode")
@@ -90,6 +98,8 @@ func main() {
 		flag.BoolVar(&flgWc, "wc", false, "count lines")
 		flag.BoolVar(&flgNoBrowserOpen, "no-open", false, "don't open browser when running dev server")
 		flag.BoolVar(&flgVisualizeBundle, "visualize-bundle", false, "visualize bundle")
+		flag.BoolVar(&flgUpdateGoDeps, "update-go-deps", false, "update go dependencies")
+
 		flag.Parse()
 	}
 
@@ -134,6 +144,11 @@ func main() {
 
 	if flgBuildLocalProd {
 		buildLocalProd()
+		return
+	}
+	if flgUpdateGoDeps {
+		defer measureDuration()()
+		updateGoDeps(true)
 		return
 	}
 
