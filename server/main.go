@@ -165,7 +165,3 @@ func main() {
 
 	flag.Usage()
 }
-
-func buildDocs() {
-	u.RunLoggedInDirMust("frontend", "yarn", "docs:build")
-}

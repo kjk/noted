@@ -156,13 +156,13 @@ func rebuildFrontend() {
 	// assuming this is not deployment: re-build the frontend
 	must(os.RemoveAll(frontEndBuildDir))
 	logf(ctx(), "deleted frontend dist dir '%s'\n", frontEndBuildDir)
-	if u.IsMac() {
-		u.RunLoggedInDirMust("frontend", "bun", "install")
-		u.RunLoggedInDirMust("frontend", "bun", "run", "build")
-	} else if u.IsWindows() {
-		u.RunLoggedInDirMust("frontend", "yarn")
-		u.RunLoggedInDirMust("frontend", "yarn", "build")
-	}
+	u.RunLoggedInDirMust("frontend", "bun", "install")
+	u.RunLoggedInDirMust("frontend", "bun", "run", "build")
+}
+
+func hasBun() bool {
+	_, err := exec.LookPath("bun")
+	return err == nil
 }
 
 func buildForProd(forLinux bool) string {

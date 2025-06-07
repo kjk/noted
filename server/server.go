@@ -538,9 +538,9 @@ func runServerProd() {
 func runServerDev() {
 	rebuildFrontend()
 
-	killYarn, err := startLoggedInDir("frontend", "yarn", "run", "dev")
+	killBun, err := startLoggedInDir("frontend", "bun", "run", "dev")
 	must(err)
-	defer killYarn()
+	defer killBun()
 
 	// must be same as vite.config.js
 	proxyURL, err := url.Parse(proxyURLStr)
