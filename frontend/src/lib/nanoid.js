@@ -1,6 +1,6 @@
 // based on https://github.com/ai/nanoid/blob/main/index.browser.js
 
-// alphabet has 63 chars so we get size^63 random numbers
+// alphabet has 63 chars so we get 63^<nChars> random numbers
 // rough numbers:
 // 63 ^ 4 = 15,752,961 == 15.7 million
 // 63 ^ 5 = 992,436,543 == 992 million
