@@ -18,7 +18,6 @@ type UserInfo struct {
 	User  string
 	Email string
 	Store *appendstore.Store
-	mu    sync.Mutex // protects Store
 }
 
 var (
@@ -54,8 +53,6 @@ func storeAppendLog(userEmail string, v []interface{}) error {
 		return fmt.Errorf("user not found for email %s", userEmail)
 	}
 
-	u.mu.Lock()
-	defer u.mu.Unlock()
 	_, err = u.Store.AppendRecord("log", jsonStr, "")
 	return err
 }
@@ -73,12 +70,11 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 	if u == nil {
 		return nil, fmt.Errorf("user not found for email %s", userID)
 	}
-	u.mu.Lock()
-	defer u.mu.Unlock()
 
 	logs := make([][]interface{}, 0)
 	n := -1
-	for _, rec := range u.Store.Records {
+	recs := u.Store.Records()
+	for _, rec := range recs {
 		if rec.Kind != "log" {
 			continue
 		}
@@ -86,7 +82,7 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 		if n < start {
 			continue
 		}
-		d, err := u.Store.ReadRecord(&rec)
+		d, err := u.Store.ReadRecord(rec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read record %s: %w", rec.Meta, err)
 		}
@@ -125,8 +121,6 @@ func contentPut(userEmail string, contentID string, r io.Reader) error {
 	if u == nil {
 		return fmt.Errorf("user not found for email %s", userEmail)
 	}
-	u.mu.Lock()
-	defer u.mu.Unlock()
 	_, err = u.Store.AppendRecord("content", d, contentID)
 	return err
 }
@@ -141,11 +135,10 @@ func contentGet(userEmail string, contentID string) ([]byte, error) {
 	if u == nil {
 		return nil, fmt.Errorf("user not found for email %s", userEmail)
 	}
-	u.mu.Lock()
-	defer u.mu.Unlock()
-	for _, rec := range u.Store.Records {
+	recs := u.Store.Records()
+	for _, rec := range recs {
 		if rec.Kind == "content" && rec.Meta == contentID {
-			return u.Store.ReadRecord(&rec)
+			return u.Store.ReadRecord(rec)
 		}
 	}
 	return nil, fmt.Errorf("content not found for user %s, contentID %s", userEmail, contentID)

@@ -93,13 +93,22 @@ func serveJSONWithCode(w http.ResponseWriter, r *http.Request, code int, v inter
 		serveInternalError(w, r, "json.Marshal() failed with '%s'", err)
 		return
 	}
-	writeHeader(w, code, jsMimeType)
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.WriteHeader(code)
 	_, err = w.Write(d)
 	logIfErrf(r.Context(), err)
 }
 
 func serveJSONOK(w http.ResponseWriter, r *http.Request, v interface{}) {
-	serveJSONWithCode(w, r, http.StatusOK, v)
+	d, err := json.Marshal(v)
+	if err != nil {
+		serveInternalError(w, r, "json.Marshal() failed with '%s'", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(d)
+	logIfErrf(r.Context(), err)
 }
 
 func serveJSON(w http.ResponseWriter, r *http.Request, code int, v interface{}) {

@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/gorilla/securecookie v1.1.2
-	github.com/kjk/common v0.0.0-20250712214445-8789c33f9e62
+	github.com/kjk/common v0.0.0-20250712231920-2ffd63ca55e7
 	github.com/kjk/minioutil v0.0.0-20230422073834-96945ac7e481
 	github.com/melbahja/goph v1.4.0
 	github.com/pkg/sftp v1.13.9
