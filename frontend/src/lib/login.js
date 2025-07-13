@@ -19,14 +19,6 @@ const um = getLocalStorageAsJSON(keyUserInfo);
 // console.log("store: um:", um);
 export const userInfo = writable(um);
 
-export function getUserLogin() {
-  const v = get(userInfo);
-  if (!v) {
-    return "";
-  }
-  return v.login;
-}
-
 function storeUserInfo(v) {
   if (v === null) {
     // we set to empty value first so that other windows get notified
@@ -68,10 +60,6 @@ async function handleStorageChanged(e) {
 }
 
 window.addEventListener("storage", handleStorageChanged);
-
-export function logout() {
-  storeUserInfo(null);
-}
 
 // returns user info if logged in, null if not logged in
 
