@@ -4,12 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -51,20 +48,6 @@ func getCallstack(skip int) string {
 	return strings.Join(frames, "\n")
 }
 
-const (
-	htmlMimeType     = "text/html; charset=utf-8"
-	jsMimeType       = "text/javascript; charset=utf-8"
-	markdownMimeType = "text/markdown; charset=UTF-8"
-)
-
-func jsonUnmarshalReader(r io.Reader, v interface{}) error {
-	d, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(d, v)
-}
-
 func fmtSmart(format string, args ...interface{}) string {
 	if len(args) == 0 {
 		return format
@@ -80,11 +63,6 @@ func serveInternalError(w http.ResponseWriter, r *http.Request, format string, a
 		"ErrorMsg": errMsg,
 	}
 	serveJSONWithCode(w, r, http.StatusInternalServerError, v)
-}
-
-func writeHeader(w http.ResponseWriter, code int, contentType string) {
-	w.Header().Set("Content-Type", contentType+"; charset=utf-8")
-	w.WriteHeader(code)
 }
 
 func serveJSONWithCode(w http.ResponseWriter, r *http.Request, code int, v interface{}) {
@@ -109,57 +87,6 @@ func serveJSONOK(w http.ResponseWriter, r *http.Request, v interface{}) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(d)
 	logIfErrf(r.Context(), err)
-}
-
-func serveJSON(w http.ResponseWriter, r *http.Request, code int, v interface{}) {
-	d, err := json.Marshal(v)
-	if err != nil {
-		logf("json.Marshal() failed with '%s'", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "json.Marshal() failed with '%s'", err)
-		return
-	}
-
-	w.Header().Set("content-type", "text/json")
-	w.WriteHeader(code)
-	_, _ = w.Write(d)
-}
-
-func serveText(w http.ResponseWriter, code int, s string) {
-	w.Header().Set("content-type", "text/plain")
-	w.WriteHeader(code)
-	_, _ = io.WriteString(w, s)
-}
-
-func printDir(dir string) {
-	fn := func(path string, info os.FileInfo, err error) error {
-		if info == nil {
-			logf("%s\n", path)
-			return nil
-		}
-		logf("%s: %d\n", path, info.Size())
-		return nil
-	}
-	filepath.Walk(dir, fn)
-}
-
-func readFileMust(path string) []byte {
-	d, err := os.ReadFile(path)
-	must(err)
-	return d
-}
-
-func runCmdLoggedMust(cmd *exec.Cmd) string {
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err == nil {
-		return ""
-	}
-	logf("cmd '%s' failed with '%s'\n", cmd, err)
-	must(err)
-	return ""
 }
 
 func startLoggedInDir(dir string, exe string, args ...string) (func(), error) {

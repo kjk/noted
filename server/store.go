@@ -161,7 +161,7 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 		return nil
 	}
 
-	findUserByEmailLocked(email, getOrCreateUser)
+	doUserOpByEmail(email, getOrCreateUser)
 	return u, nil
 }
 

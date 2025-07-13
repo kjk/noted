@@ -3,9 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/kjk/common/u"
@@ -63,12 +62,6 @@ type GitHubUser struct {
 	} `json:"plan"`
 }
 
-func getGitHubTokenFromRequest(r *http.Request) string {
-	auth := r.Header.Get("Authorization")
-	token := strings.TrimPrefix(auth, "token ")
-	return token
-}
-
 // JSONRequest represents a JSON request
 type JSONRequest struct {
 	Server    string
@@ -123,7 +116,7 @@ func (r *JSONRequest) Get() error {
 		return nil
 	}
 	defer u.CloseNoError(resp.Body)
-	r.Body, r.Err = ioutil.ReadAll(resp.Body)
+	r.Body, r.Err = io.ReadAll(resp.Body)
 	if r.Err != nil {
 		return r.Err
 	}

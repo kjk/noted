@@ -160,11 +160,6 @@ func rebuildFrontend() {
 	u.RunLoggedInDirMust("frontend", "bun", "run", "build")
 }
 
-func hasBun() bool {
-	_, err := exec.LookPath("bun")
-	return err == nil
-}
-
 func buildForProd(forLinux bool) string {
 	// re-build the frontend. remove build process artifacts
 	// to keep things clean
