@@ -2,6 +2,13 @@ import { error, log } from "./log.js";
 import { get, writable } from "svelte/store";
 import { getLocalStorageAsJSON, setLocalStorageFromJSON } from "./util.js";
 
+/** @typedef {{
+  user: string;
+  email: string;
+  login: string;
+  avatar_url?: string;
+}} UserInfo */
+
 // TODO: must distinguish between offline (was lgged in but cannot reach server)
 // and not logged in
 
@@ -68,6 +75,9 @@ export function logout() {
 
 // returns user info if logged in, null if not logged in
 
+/**
+ * @returns {Promise<UserInfo|null>}
+ */
 export async function getLoggedUser() {
   let user = null;
   try {

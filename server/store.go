@@ -133,10 +133,11 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 		return nil, fmt.Errorf("user not logged in (no cookie)")
 	}
 	email := cookie.Email
-	var u *UserInfo
+	var userInfo *UserInfo
 
 	getOrCreateUser := func(u *UserInfo, i int) error {
 		if u != nil {
+			userInfo = u
 			return nil
 		}
 		u = &UserInfo{
@@ -158,11 +159,12 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 			return err
 		}
 		users = append(users, u)
+		userInfo = u
 		return nil
 	}
 
 	doUserOpByEmail(email, getOrCreateUser)
-	return u, nil
+	return userInfo, nil
 }
 
 func handleStore(w http.ResponseWriter, r *http.Request) {
