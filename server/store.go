@@ -40,7 +40,7 @@ func serveError(w http.ResponseWriter, s string, code int) {
 	http.Error(w, s, code)
 }
 
-func storeAppendLog(userEmail string, v []interface{}) error {
+func storeAppendLog(u *UserInfo, v []interface{}) error {
 	logf("storeAppendLog()\n")
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
@@ -48,28 +48,19 @@ func storeAppendLog(userEmail string, v []interface{}) error {
 		return err
 	}
 
-	u := findUserByEmail(userEmail)
-	if u == nil {
-		return fmt.Errorf("user not found for email %s", userEmail)
-	}
-
 	_, err = u.Store.AppendRecord("log", jsonStr, "")
 	return err
 }
 
-func storeGetLogs(userID string, start int) ([][]interface{}, error) {
+func storeGetLogs(u *UserInfo, start int) ([][]interface{}, error) {
 	if start < 0 {
 		start = 0
 	}
-	logf("storeGetLogs(): userID: '%s', start: %d\n", userID, start)
+	logf("storeGetLogs(): userEmail: '%s', start: %d\n", u.Email, start)
 	timeStart := time.Now()
 	defer func() {
 		logf("  took %s\n", time.Since(timeStart))
 	}()
-	u := findUserByEmail(userID)
-	if u == nil {
-		return nil, fmt.Errorf("user not found for email %s", userID)
-	}
 
 	logs := make([][]interface{}, 0)
 	n := -1
@@ -93,7 +84,7 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 		}
 		logs = append(logs, v)
 	}
-	logf("%d log entries for user %s\n", len(logs), userID)
+	logf("%d log entries for user %s\n", len(logs), u.Email)
 	return logs, nil
 }
 
@@ -105,7 +96,7 @@ func checkMethodPOSTorPUT(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-func contentPut(userEmail string, contentID string, r io.Reader) error {
+func contentPut(u *UserInfo, contentID string, r io.Reader) error {
 	// Note: tried to PustObject(r) but the way minio client does multi-part
 	// uploads is not compatible with r2
 	d, err := io.ReadAll(r)
@@ -117,31 +108,23 @@ func contentPut(userEmail string, contentID string, r io.Reader) error {
 		logf("  took %s\n", time.Since(timeStart))
 	}()
 
-	u := findUserByEmail(userEmail)
-	if u == nil {
-		return fmt.Errorf("user not found for email %s", userEmail)
-	}
 	_, err = u.Store.AppendRecord("content", d, contentID)
 	return err
 }
 
-func contentGet(userEmail string, contentID string) ([]byte, error) {
+func contentGet(u *UserInfo, contentID string) ([]byte, error) {
 	timeStart := time.Now()
 	defer func() {
 		logf("  took %s\n", time.Since(timeStart))
 	}()
 
-	u := findUserByEmail(userEmail)
-	if u == nil {
-		return nil, fmt.Errorf("user not found for email %s", userEmail)
-	}
 	recs := u.Store.Records()
 	for _, rec := range recs {
 		if rec.Kind == "content" && rec.Meta == contentID {
 			return u.Store.ReadRecord(rec)
 		}
 	}
-	return nil, fmt.Errorf("content not found for user %s, contentID %s", userEmail, contentID)
+	return nil, fmt.Errorf("content not found for user %s, contentID %s", u.Email, contentID)
 }
 
 func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
@@ -150,53 +133,47 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 		return nil, fmt.Errorf("user not logged in (no cookie)")
 	}
 	email := cookie.Email
-	var userInfo *UserInfo
-	getOrCreateUser := func(u *UserInfo, i int) error {
-		if u == nil {
-			userInfo = &UserInfo{
-				Email: cookie.Email,
-				User:  cookie.User,
-			}
+	var u *UserInfo
 
-			dataDir := getDataDirMust()
-			// TODO: must escape email to avoid chars not allowed in file names
-			dataDir = filepath.Join(dataDir, email)
-			userInfo.Store = &appendstore.Store{
-				DataDir:       dataDir,
-				IndexFileName: "index.txt",
-				DataFileName:  "data.bin",
-			}
-			err := appendstore.OpenStore(userInfo.Store)
-			if err != nil {
-				logf("getLoggedUser(): failed to open store for user %s, err: %s\n", email, err)
-				return err
-			}
-			users = append(users, userInfo)
+	getOrCreateUser := func(u *UserInfo, i int) error {
+		if u != nil {
 			return nil
 		}
+		u = &UserInfo{
+			Email: cookie.Email,
+			User:  cookie.User,
+		}
 
-		userInfo = u
+		dataDir := getDataDirMust()
+		// TODO: must escape email to avoid chars not allowed in file names
+		dataDir = filepath.Join(dataDir, email)
+		u.Store = &appendstore.Store{
+			DataDir:       dataDir,
+			IndexFileName: "index.txt",
+			DataFileName:  "data.bin",
+		}
+		err := appendstore.OpenStore(u.Store)
+		if err != nil {
+			logf("getLoggedUser(): failed to open store for user %s, err: %s\n", email, err)
+			return err
+		}
+		users = append(users, u)
 		return nil
 	}
+
 	findUserByEmailLocked(email, getOrCreateUser)
-	return userInfo, nil
+	return u, nil
 }
 
 func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
-	userInfo, err := getLoggedUser(r, w)
+	u, err := getLoggedUser(r, w)
 	if serveIfError(w, err) {
 		logf("handleStore: %s, err: %s\n", uri, err)
 		return
 	}
-	userEmail := userInfo.Email
+	userEmail := u.Email
 	logf("handleStore: %s, userEmail: %s\n", uri, userEmail)
-	u := findUserByEmail(userEmail)
-	if u == nil {
-		err := fmt.Errorf("user not found for email %s", userEmail)
-		serveIfError(w, err)
-		return
-	}
 
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
@@ -205,7 +182,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			start = 0
 		}
-		logs, err := storeGetLogs(userEmail, start)
+		logs, err := storeGetLogs(u, start)
 		if serveIfError(w, err) {
 			return
 		}
@@ -224,7 +201,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if serveIfError(w, err) {
 			return
 		}
-		err = storeAppendLog(userEmail, logEntry)
+		err = storeAppendLog(u, logEntry)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{
 				"ok": true,
@@ -240,7 +217,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 			serveError(w, "id is required", http.StatusBadRequest)
 			return
 		}
-		data, err := contentGet(userEmail, id)
+		data, err := contentGet(u, id)
 		if serveIfError(w, err) {
 			return
 		}
@@ -257,7 +234,7 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 		if len(contentID) < 6 {
 			serveError(w, "id must be at least 6 chars", http.StatusBadRequest)
 		}
-		err = contentPut(userEmail, contentID, r.Body)
+		err = contentPut(u, contentID, r.Body)
 		if !serveIfError(w, err) {
 			res := map[string]interface{}{}
 			serveJSONOK(w, r, res)
