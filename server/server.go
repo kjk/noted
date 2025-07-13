@@ -63,7 +63,7 @@ func setSecureCookie(w http.ResponseWriter, c *SecureCookieValue) {
 	panicIf(c.User == "", "setSecureCookie: empty user")
 	panicIf(c.Email == "", "setSecureCookie: empty email")
 
-	logf(ctx(), "setSecureCookie: user: '%s', email: '%s'\n", c.User, c.Email)
+	logf("setSecureCookie: user: '%s', email: '%s'\n", c.User, c.Email)
 	if encoded, err := secureCookie.Encode(cookieName, c); err == nil {
 		// TODO: set expiration (Expires    time.Time) long time in the future?
 		cookie := &http.Cookie{
@@ -134,13 +134,11 @@ func httpScheme(r *http.Request) string {
 
 // /auth/ghlogin
 func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
 	redirectURL := strings.TrimSpace(r.FormValue("redirect"))
 	if redirectURL == "" {
 		redirectURL = "/"
 	}
-	logf(ctx, "handleLoginGitHub: '%s', redirect: '%s'\n", r.RequestURI, redirectURL)
+	logf("handleLoginGitHub: '%s', redirect: '%s'\n", r.RequestURI, redirectURL)
 	clientID, _ := getGitHubSecrets()
 
 	// secret value passed to auth server and then back to us
@@ -150,7 +148,7 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	muStore.Unlock()
 
 	cb := httpScheme(r) + r.Host + "/auth/githubcb"
-	logf(ctx, "handleLogin: cb='%s'\n", cb)
+	logf("handleLogin: cb='%s'\n", cb)
 
 	vals := url.Values{}
 	vals.Add("client_id", clientID)
@@ -159,7 +157,7 @@ func handleLoginGitHub(w http.ResponseWriter, r *http.Request) {
 	vals.Add("redirect_uri", cb)
 
 	authURL := "https://github.com/login/oauth/authorize?" + vals.Encode()
-	logf(ctx, "handleLogin: doing auth 302 redirect to '%s'\n", authURL)
+	logf("handleLogin: doing auth 302 redirect to '%s'\n", authURL)
 	http.Redirect(w, r, authURL, http.StatusFound) // 302
 }
 
@@ -189,11 +187,10 @@ func findUserByEmail(email string) *UserInfo {
 
 // /auth/ghlogout
 func handleLogoutGitHub(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	logf(ctx, "handleLogoutGitHub()\n")
+	logf("handleLogoutGitHub()\n")
 	cookie := getSecureCookie(r)
 	if cookie == nil {
-		logf(ctx, "handleLogoutGitHub: already logged out\n")
+		logf("handleLogoutGitHub: already logged out\n")
 		http.Redirect(w, r, "/", http.StatusFound) // 302
 		return
 	}
@@ -215,18 +212,18 @@ const errorURL = "/github_login_failed"
 // /auth/user
 // returns JSON with user info in the body
 func handleAuthUser(w http.ResponseWriter, r *http.Request) {
-	logf(ctx(), "handleAuthUser: '%s'\n", r.URL)
+	logf("handleAuthUser: '%s'\n", r.URL)
 	v := map[string]interface{}{}
 	cookie := getSecureCookie(r)
 	if cookie == nil {
 		v["error"] = "not logged in"
-		logf(ctx(), "handleAuthUser: not logged in\n")
+		logf("handleAuthUser: not logged in\n")
 	} else {
 		v["user"] = cookie.User
 		v["login"] = cookie.User
 		v["email"] = cookie.Email
 		v["avatar_url"] = cookie.AvatarURL
-		logf(ctx(), "handleAuthUser: logged in as '%s', '%s'\n", cookie.User, cookie.Email)
+		logf("handleAuthUser: logged in as '%s', '%s'\n", cookie.User, cookie.Email)
 	}
 	serveJSONOK(w, r, v)
 }
@@ -236,11 +233,11 @@ func handleAuthUser(w http.ResponseWriter, r *http.Request) {
 // https://github.com/settings/applications/2175661
 // https://github.com/settings/applications/2175803
 func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
-	logf(ctx(), "handleGithubCallback: '%s'\n", r.URL)
+	logf("handleGithubCallback: '%s'\n", r.URL)
 	state := r.FormValue("state")
 	redirectURL := loginsInProress[state]
 	if redirectURL == "" {
-		logErrorf(ctx(), "invalid oauth state, no redirect for state '%s'\n", state)
+		logErrorf("invalid oauth state, no redirect for state '%s'\n", state)
 		uri := "/github_login_failed?err=" + url.QueryEscape("invalid oauth state")
 		http.Redirect(w, r, uri, http.StatusTemporaryRedirect)
 		return
@@ -261,7 +258,7 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := postWithHeaders(uri, hdrs)
 	if err != nil {
-		logf(ctx(), "http.Post() failed with '%s'\n", err)
+		logf("http.Post() failed with '%s'\n", err)
 		// logForm(r)
 		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
 		return
@@ -269,7 +266,7 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	var m map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&m)
 	if err != nil {
-		logf(ctx(), "json.NewDecoder() failed with '%s'\n", err)
+		logf("json.NewDecoder() failed with '%s'\n", err)
 		// logForm(r)
 		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
 	}
@@ -284,11 +281,11 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	token_type := mapStr(m, "token_type")
 	scope := mapStr(m, "scope")
 
-	logf(ctx(), "access_token: %s, token_type: %s, scope: %s\n", access_token, token_type, scope)
+	logf("access_token: %s, token_type: %s, scope: %s\n", access_token, token_type, scope)
 
 	_, i, err := getGitHubUserInfo(access_token)
 	if err != nil {
-		logf(ctx(), "getGitHubUserInfo() failed with '%s'\n", err)
+		logf("getGitHubUserInfo() failed with '%s'\n", err)
 		http.Redirect(w, r, errorURL+"?error="+url.QueryEscape(err.Error()), http.StatusTemporaryRedirect)
 		return
 	}
@@ -299,9 +296,9 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	cookie.Name = i.Name
 	cookie.AvatarURL = i.AvatarURL
 	litter.Dump(cookie)
-	logf(ctx(), "github user: '%s', email: '%s'\n", cookie.User, cookie.Email)
+	logf("github user: '%s', email: '%s'\n", cookie.User, cookie.Email)
 	setSecureCookie(w, cookie)
-	logf(ctx(), "handleOauthGitHubCallback: redirect: '%s'\n", redirectURL)
+	logf("handleOauthGitHubCallback: redirect: '%s'\n", redirectURL)
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 
 	// can't put in the background because that cancels ctx
@@ -343,7 +340,7 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
 	name := strings.TrimPrefix(uri, "/event/")
 	if name == "" {
-		logErrorf(ctx(), "/event/ has no name\n")
+		logErrorf("/event/ has no name\n")
 		http.NotFound(w, r)
 		return
 	}
@@ -366,7 +363,7 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		err := dec.Decode(&meta)
 		if err != nil {
 			// ignore but log
-			logErrorf(ctx(), "dec.Decode() failed with '%s'\n", err)
+			logErrorf("dec.Decode() failed with '%s'\n", err)
 		} else {
 			for k, v := range m {
 				vs := fmt.Sprintf("%s", v)
@@ -483,7 +480,7 @@ func makeHTTPServer(proxyHandler *httputil.ReverseProxy, fsys fs.FS) *http.Serve
 		m := httpsnoop.CaptureMetrics(http.HandlerFunc(mainHandler), w, r)
 		defer func() {
 			if p := recover(); p != nil {
-				logf(ctx(), "handlerWithMetrics: panicked with with %v\n", p)
+				logf("handlerWithMetrics: panicked with with %v\n", p)
 				errStr := fmt.Sprintf("Error: %v", p)
 				serveError(w, errStr, http.StatusInternalServerError)
 				return
@@ -517,7 +514,7 @@ func runServerProd() {
 		fsys, err = u.NewMemoryFSForZipData(frontendZipData)
 		must(err)
 		sizeStr := u.FormatSize(int64(len(frontendZipData)))
-		logf(ctx(), "runServerProd(): will serve files from embedded zip of size '%v'\n", sizeStr)
+		logf("runServerProd(): will serve files from embedded zip of size '%v'\n", sizeStr)
 	} else {
 		panicIf(isLinux(), "if running on Linux, must use frontendZipDataa")
 		rebuildFrontend()
@@ -526,7 +523,7 @@ func runServerProd() {
 	}
 
 	httpSrv := makeHTTPServer(nil, fsys)
-	logf(ctx(), "runServerProd(): starting on 'http://%s', dev: %v\n", httpSrv.Addr, isDev())
+	logf("runServerProd(): starting on 'http://%s', dev: %v\n", httpSrv.Addr, isDev())
 	waitFn := serverListenAndWait(httpSrv)
 	if isWinOrMac() {
 		time.Sleep(time.Second * 2)
@@ -553,7 +550,7 @@ func runServerDev() {
 	//closeHTTPLog := OpenHTTPLog("noted")
 	//defer closeHTTPLog()
 
-	logf(ctx(), "runServerDev(): starting on '%s', dev: %v\n", httpSrv.Addr, isDev())
+	logf("runServerDev(): starting on '%s', dev: %v\n", httpSrv.Addr, isDev())
 	waitFn := serverListenAndWait(httpSrv)
 	if isWinOrMac() && !flgNoBrowserOpen {
 		time.Sleep(time.Second * 2)
@@ -571,9 +568,9 @@ func serverListenAndWait(httpSrv *http.Server) func() {
 			err = nil
 		}
 		if err == nil {
-			logf(ctx(), "HTTP server shutdown gracefully\n")
+			logf("HTTP server shutdown gracefully\n")
 		} else {
-			logf(ctx(), "httpSrv.ListenAndServe error '%s'\n", err)
+			logf("httpSrv.ListenAndServe error '%s'\n", err)
 		}
 		chServerClosed <- true
 	}()
@@ -584,14 +581,14 @@ func serverListenAndWait(httpSrv *http.Server) func() {
 		defer stop()
 		<-sctx.Done()
 
-		logf(ctx(), "Got one of the signals. Shutting down http server\n")
+		logf("Got one of the signals. Shutting down http server\n")
 		_ = httpSrv.Shutdown(ctx())
 		select {
 		case <-chServerClosed:
 			// do nothing
 		case <-time.After(time.Second * 5):
 			// timeout
-			logf(ctx(), "timed out trying to shut down http server")
+			logf("timed out trying to shut down http server")
 		}
 	}
 }

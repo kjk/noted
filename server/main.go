@@ -20,7 +20,7 @@ var (
 func loadSecrets() {
 	var m map[string]string
 	if len(secretsEnv) > 0 {
-		logf(ctx(), "loading secrets from secretsEnv\n")
+		logf("loading secrets from secretsEnv\n")
 		m = u.ParseEnvMust(secretsEnv)
 	} else {
 		panicIf(!isWinOrMac(), "secretsEnv is empty and running on linux")
@@ -33,12 +33,12 @@ func loadSecrets() {
 	getEnv := func(key string, val *string, minLen int) {
 		v := strings.TrimSpace(m[key])
 		if len(v) < minLen {
-			logf(ctx(), "Missing %s\n", key)
+			logf("Missing %s\n", key)
 			return
 		}
 		*val = v
-		// logf(ctx(), "Got %s, '%s'\n", key, v)
-		logf(ctx(), "Got %s\n", key)
+		// logf("Got %s, '%s'\n", key, v)
+		logf("Got %s\n", key)
 	}
 
 	getEnv("GITHUB_SECRET_PROD", &secretGitHub, 40)
@@ -62,7 +62,7 @@ func getDataDirMust() string {
 			dataDir = "data"
 		}
 		must(os.MkdirAll(dataDir, 0755))
-		logf(ctx(), "dataDir: %s\n", dataDir)
+		logf("dataDir: %s\n", dataDir)
 	}
 	return dataDir
 }
@@ -74,7 +74,7 @@ func isDev() bool {
 func measureDuration() func() {
 	timeStart := time.Now()
 	return func() {
-		logf(ctx(), "took %s\n", time.Since(timeStart))
+		logf("took %s\n", time.Since(timeStart))
 	}
 }
 
@@ -114,7 +114,7 @@ func main() {
 	if false {
 		v := []interface{}{"s", 5, "hala"}
 		d, _ := json.Marshal(v)
-		logf(ctx(), "v: %s\n", string(d))
+		logf("v: %s\n", string(d))
 		return
 	}
 
@@ -130,7 +130,7 @@ func main() {
 
 	timeStart := time.Now()
 	defer func() {
-		logf(ctx(), "took: %s\n", time.Since(timeStart))
+		logf("took: %s\n", time.Since(timeStart))
 	}()
 
 	if flgExtractFrontend {

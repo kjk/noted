@@ -22,7 +22,7 @@ func doLineCount() int {
 	stats := u.NewLineStats()
 	err := stats.CalcInDir(".", allFiles, true)
 	if err != nil {
-		logf(ctx(), "doWordCount: stats.wcInDir() failed with '%s'\n", err)
+		logf("doWordCount: stats.wcInDir() failed with '%s'\n", err)
 		return 1
 	}
 	u.PrintLineStats(stats)
@@ -41,7 +41,7 @@ func lineCountDaily() {
 	cmd := exec.Command("git", "log", `--pretty=format:%h%x09%ad`, "--date=short", "--reverse")
 	out, err := cmd.CombinedOutput()
 	must(err)
-	// logf(ctx(), "%s\n", string(out))
+	// logf("%s\n", string(out))
 	lines := strings.Split(string(out), "\n")
 
 	pad := func(s string, n int) string {
@@ -53,11 +53,11 @@ func lineCountDaily() {
 
 	prevTotal := 0
 	statsPerDay := func(dayNo int, day, hash string) {
-		// logf(ctx(), "%s: %s\n", day, hash)
+		// logf("%s: %s\n", day, hash)
 		cmd = exec.Command("git", "checkout", hash)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			logf(ctx(), "%s failed with '%s', out:\n%s\n", cmd, err, string(out))
+			logf("%s failed with '%s', out:\n%s\n", cmd, err, string(out))
 			os.Exit(1)
 		}
 		stats := u.NewLineStats()
@@ -73,7 +73,7 @@ func lineCountDaily() {
 			diffStr = "+" + diffStr
 		}
 		diffStr = pad(diffStr, 5)
-		logf(ctx(), "%s, day % 3d: % 5d %s", day, dayNo, total, diffStr)
+		logf("%s, day % 3d: % 5d %s", day, dayNo, total, diffStr)
 		lineCount := u.LineStatsPerExt(stats.FileToCount)
 		a := []string{}
 		for _, lc := range lineCount {
@@ -81,7 +81,7 @@ func lineCountDaily() {
 			a = append(a, s)
 		}
 		s := strings.Join(a, ", ")
-		logf(ctx(), " (%s)\n", s)
+		logf(" (%s)\n", s)
 		prevTotal = total
 	}
 
@@ -92,12 +92,12 @@ func lineCountDaily() {
 		parts := strings.Split(l, "\t")
 		hash := parts[0]
 		day := parts[1]
-		// logf(ctx(), "%s: %s\n", day, hash)
+		// logf("%s: %s\n", day, hash)
 		if day != lastDay {
 			if lastHash != "" {
 				statsPerDay(dayNo, lastDay, lastHash)
 				dayNo++
-				// logf(ctx(), "%s: %s remembered\n", lastDay, lastHash)
+				// logf("%s: %s remembered\n", lastDay, lastHash)
 			}
 		}
 		lastDay = day
@@ -105,5 +105,5 @@ func lineCountDaily() {
 	}
 	statsPerDay(dayNo, lastDay, lastHash)
 	perDay := prevTotal / dayNo
-	logf(ctx(), "per day: (%d / %d) = %d\n", prevTotal, dayNo, perDay)
+	logf("per day: (%d / %d) = %d\n", prevTotal, dayNo, perDay)
 }

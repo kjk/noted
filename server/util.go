@@ -73,7 +73,7 @@ func fmtSmart(format string, args ...interface{}) string {
 }
 
 func serveInternalError(w http.ResponseWriter, r *http.Request, format string, args ...interface{}) {
-	logErrorf(r.Context(), u.AppendNewline(&format), args...)
+	logErrorf(u.AppendNewline(&format), args...)
 	errMsg := fmtSmart(format, args...)
 	v := map[string]interface{}{
 		"URL":      r.URL.String(),
@@ -112,10 +112,9 @@ func serveJSONOK(w http.ResponseWriter, r *http.Request, v interface{}) {
 }
 
 func serveJSON(w http.ResponseWriter, r *http.Request, code int, v interface{}) {
-	ctx := r.Context()
 	d, err := json.Marshal(v)
 	if err != nil {
-		logf(ctx, "json.Marshal() failed with '%s'", err)
+		logf("json.Marshal() failed with '%s'", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "json.Marshal() failed with '%s'", err)
 		return
@@ -133,13 +132,12 @@ func serveText(w http.ResponseWriter, code int, s string) {
 }
 
 func printDir(dir string) {
-	ctx := context.Background()
 	fn := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
-			logf(ctx, "%s\n", path)
+			logf("%s\n", path)
 			return nil
 		}
-		logf(ctx, "%s: %d\n", path, info.Size())
+		logf("%s: %d\n", path, info.Size())
 		return nil
 	}
 	filepath.Walk(dir, fn)
@@ -159,7 +157,7 @@ func runCmdLoggedMust(cmd *exec.Cmd) string {
 	if err == nil {
 		return ""
 	}
-	logf(ctx(), "cmd '%s' failed with '%s'\n", cmd, err)
+	logf("cmd '%s' failed with '%s'\n", cmd, err)
 	must(err)
 	return ""
 }
@@ -185,7 +183,7 @@ func updateGoDeps(noProxy bool) {
 		if noProxy {
 			cmd.Env = append(os.Environ(), "GOPROXY=direct")
 		}
-		logf(ctx(), "running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
+		logf("running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()
@@ -194,7 +192,7 @@ func updateGoDeps(noProxy bool) {
 	{
 		cmd := exec.Command("go", "mod", "tidy")
 		cmd.Dir = "server"
-		logf(ctx(), "running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
+		logf("running: %s in dir '%s'\n", cmd.String(), cmd.Dir)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()

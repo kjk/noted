@@ -27,24 +27,24 @@ var (
 )
 
 func serveIfError(w http.ResponseWriter, err error) bool {
-	if err != nil {
-		logErrorf(ctx(), "serveIfError(): %s\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return true
+	if err == nil {
+		return false
 	}
-	return false
+	logErrorf("serveIfError(): %s\n", err)
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	return true
 }
 
 func serveError(w http.ResponseWriter, s string, code int) {
-	logErrorf(ctx(), "%s\n", s)
+	logErrorf("%s\n", s)
 	http.Error(w, s, code)
 }
 
 func storeAppendLog(userEmail string, v []interface{}) error {
-	logf(ctx(), "storeAppendLog()\n")
+	logf("storeAppendLog()\n")
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
-		logf(ctx(), "storeAppendLog(): failed to marshal '%#v', err: %s\n", v, err)
+		logf("storeAppendLog(): failed to marshal '%#v', err: %s\n", v, err)
 		return err
 	}
 
@@ -61,10 +61,10 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 	if start < 0 {
 		start = 0
 	}
-	logf(ctx(), "storeGetLogs(): userID: '%s', start: %d\n", userID, start)
+	logf("storeGetLogs(): userID: '%s', start: %d\n", userID, start)
 	timeStart := time.Now()
 	defer func() {
-		logf(ctx(), "  took %s\n", time.Since(timeStart))
+		logf("  took %s\n", time.Since(timeStart))
 	}()
 	u := findUserByEmail(userID)
 	if u == nil {
@@ -93,7 +93,7 @@ func storeGetLogs(userID string, start int) ([][]interface{}, error) {
 		}
 		logs = append(logs, v)
 	}
-	logf(ctx(), "%d log entries for user %s\n", len(logs), userID)
+	logf("%d log entries for user %s\n", len(logs), userID)
 	return logs, nil
 }
 
@@ -114,7 +114,7 @@ func contentPut(userEmail string, contentID string, r io.Reader) error {
 	}
 	timeStart := time.Now()
 	defer func() {
-		logf(ctx(), "  took %s\n", time.Since(timeStart))
+		logf("  took %s\n", time.Since(timeStart))
 	}()
 
 	u := findUserByEmail(userEmail)
@@ -128,7 +128,7 @@ func contentPut(userEmail string, contentID string, r io.Reader) error {
 func contentGet(userEmail string, contentID string) ([]byte, error) {
 	timeStart := time.Now()
 	defer func() {
-		logf(ctx(), "  took %s\n", time.Since(timeStart))
+		logf("  took %s\n", time.Since(timeStart))
 	}()
 
 	u := findUserByEmail(userEmail)
@@ -168,7 +168,7 @@ func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
 			}
 			err := appendstore.OpenStore(userInfo.Store)
 			if err != nil {
-				logf(ctx(), "getLoggedUser(): failed to open store for user %s, err: %s\n", email, err)
+				logf("getLoggedUser(): failed to open store for user %s, err: %s\n", email, err)
 				return err
 			}
 			users = append(users, userInfo)
@@ -186,11 +186,18 @@ func handleStore(w http.ResponseWriter, r *http.Request) {
 	uri := r.URL.Path
 	userInfo, err := getLoggedUser(r, w)
 	if serveIfError(w, err) {
-		logf(ctx(), "handleStore: %s, err: %s\n", uri, err)
+		logf("handleStore: %s, err: %s\n", uri, err)
 		return
 	}
 	userEmail := userInfo.Email
-	logf(ctx(), "handleStore: %s, userEmail: %s\n", uri, userEmail)
+	logf("handleStore: %s, userEmail: %s\n", uri, userEmail)
+	u := findUserByEmail(userEmail)
+	if u == nil {
+		err := fmt.Errorf("user not found for email %s", userEmail)
+		serveIfError(w, err)
+		return
+	}
+
 	if uri == "/api/store/getLogs" {
 		// TODO: maybe will need to paginate
 		startStr := r.URL.Query().Get("start")
