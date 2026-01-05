@@ -40,7 +40,7 @@ func serveError(w http.ResponseWriter, s string, code int) {
 	http.Error(w, s, code)
 }
 
-func storeAppendLog(u *UserInfo, v []interface{}) error {
+func storeAppendLog(u *UserInfo, v []any) error {
 	logf("storeAppendLog()\n")
 	jsonStr, err := json.Marshal(v)
 	if err != nil {
@@ -48,11 +48,11 @@ func storeAppendLog(u *UserInfo, v []interface{}) error {
 		return err
 	}
 
-	_, err = u.Store.AppendRecord("log", jsonStr, "")
+	err = u.Store.AppendRecord("log", "", jsonStr)
 	return err
 }
 
-func storeGetLogs(u *UserInfo, start int) ([][]interface{}, error) {
+func storeGetLogs(u *UserInfo, start int) ([][]any, error) {
 	if start < 0 {
 		start = 0
 	}
@@ -62,7 +62,7 @@ func storeGetLogs(u *UserInfo, start int) ([][]interface{}, error) {
 		logf("  took %s\n", time.Since(timeStart))
 	}()
 
-	logs := make([][]interface{}, 0)
+	logs := make([][]any, 0)
 	n := -1
 	recs := u.Store.Records()
 	for _, rec := range recs {
@@ -77,7 +77,7 @@ func storeGetLogs(u *UserInfo, start int) ([][]interface{}, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read record %s: %w", rec.Meta, err)
 		}
-		var v []interface{}
+		var v []any
 		err = json.Unmarshal(d, &v)
 		if err != nil {
 			return nil, err
@@ -108,7 +108,7 @@ func contentPut(u *UserInfo, contentID string, r io.Reader) error {
 		logf("  took %s\n", time.Since(timeStart))
 	}()
 
-	_, err = u.Store.AppendRecord("content", d, contentID)
+	err = u.Store.AppendRecord("content", contentID, d)
 	return err
 }
 
@@ -127,7 +127,7 @@ func contentGet(u *UserInfo, contentID string) ([]byte, error) {
 	return nil, fmt.Errorf("content not found for user %s, contentID %s", u.Email, contentID)
 }
 
-func getLoggedUser(r *http.Request, w http.ResponseWriter) (*UserInfo, error) {
+func getLoggedUser(r *http.Request, _ http.ResponseWriter) (*UserInfo, error) {
 	cookie := getSecureCookie(r)
 	if cookie == nil || cookie.Email == "" {
 		return nil, fmt.Errorf("user not logged in (no cookie)")

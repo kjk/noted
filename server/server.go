@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -22,7 +23,6 @@ import (
 	"github.com/sanity-io/litter"
 
 	"github.com/kjk/common/u"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -202,7 +202,7 @@ const errorURL = "/github_login_failed"
 // returns JSON with user info in the body
 func handleAuthUser(w http.ResponseWriter, r *http.Request) {
 	logf("handleAuthUser: '%s'\n", r.URL)
-	v := map[string]interface{}{}
+	v := map[string]any{}
 	cookie := getSecureCookie(r)
 	if cookie == nil {
 		v["error"] = "not logged in"
@@ -294,7 +294,7 @@ func handleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	logLogin(ctx(), r, i)
 }
 
-func mapStr(m map[string]interface{}, key string) string {
+func mapStr(m map[string]any, key string) string {
 	if v, ok := m[key]; ok {
 		if s, ok := v.(string); ok {
 			return s
@@ -347,7 +347,7 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost || r.Method == http.MethodPut {
-		var m map[string]interface{}
+		var m map[string]any
 		dec := json.NewDecoder(r.Body)
 		err := dec.Decode(&meta)
 		if err != nil {
